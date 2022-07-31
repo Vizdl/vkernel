@@ -589,7 +589,7 @@ export KBUILD_IMAGE ?= vkernel
 export	INSTALL_PATH ?= ./install
 
 
-objs-y		:= arch/$(SRCARCH)
+objs-y		:= arch/$(SRCARCH) init
 libs-y		:=
 
 vkernel-dirs	:= $(objs-y) $(libs-y)
