@@ -590,7 +590,7 @@ export	INSTALL_PATH ?= ./install
 
 
 objs-y		:= arch/$(SRCARCH) init
-libs-y		:=
+libs-y		:= lib
 
 vkernel-dirs	:= $(objs-y) $(libs-y)
 vkernel-objs	:= $(patsubst %,%/built-in.o, $(objs-y))
