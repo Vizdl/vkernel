@@ -11,14 +11,14 @@
 /*
  * PGDIR_SHIFT determines what a top-level page table entry can map
  */
-#define PGDIR_SHIFT	30
+#define PGDIR_SHIFT		30
 #define PTRS_PER_PGD	4
 
 /*
  * PMD_SHIFT determines the size of the area a middle-level
  * page table can map
  */
-#define PMD_SHIFT	21
+#define PMD_SHIFT		21
 #define PTRS_PER_PMD	512
 
 /*

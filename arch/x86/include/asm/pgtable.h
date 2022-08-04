@@ -35,4 +35,35 @@
 // 页面在内存中, 但是不可访问
 #define _PAGE_PROTNONE	    0x080	/* If not present */
 
+#include <asm/pgtable-2level.h>
+
+// 判断 pte 是否可用(不在内存中或不可访问都为不可用)
+#define pte_present(x)	((x).pte_low & (_PAGE_PRESENT | _PAGE_PROTNONE))
+// 将 xp 的内容设置为 0
+#define pte_clear(xp)	do { set_pte(xp, __pte(0)); } while (0)
+
+/**
+ * @brief 获取虚拟地址在 pgd 表中的索引
+ * @param 虚拟地址
+ * @return 虚拟地址在 pgd 表中的索引
+ */
+#define pgd_index(address) ((address >> PGDIR_SHIFT) & (PTRS_PER_PGD-1))
+#define __pgd_offset(address) pgd_index(address)
+
+/**
+ * @brief 获取虚拟地址在 pmd 表中的索引
+ * @param 虚拟地址
+ * @return 虚拟地址在 pmd 表中的索引
+ */
+#define __pmd_offset(address) \
+		(((address) >> PMD_SHIFT) & (PTRS_PER_PMD-1))
+
+/**
+ * @brief 获取虚拟地址在 pte 表中的索引
+ * @param 虚拟地址
+ * @return 虚拟地址在 pte 表中的索引
+ */
+#define __pte_offset(address) \
+		((address >> PAGE_SHIFT) & (PTRS_PER_PTE - 1))
+        
 #endif /* _I386_PGTABLE_H */

@@ -5,8 +5,6 @@
  * Copyright 1992, Linus Torvalds.
  */
 
-#include <linux/config.h>
-
 #define LOCK_PREFIX ""
 
 #define ADDR (*(volatile long *) addr)
