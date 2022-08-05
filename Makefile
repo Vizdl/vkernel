@@ -230,6 +230,9 @@ ifeq ($(ARCH),x86_64)
         SRCARCH := x86
 endif
 
+# Where to locate arch specific headers
+hdr-arch  := $(SRCARCH)
+
 KCONFIG_CONFIG	?= .config
 export KCONFIG_CONFIG
 
@@ -286,7 +289,8 @@ AFLAGS_KERNEL	=
 # Needed to be compatible with the O= option
 VKERNELINCLUDE    := \
 		$(if $(KBUILD_SRC), -I$(srctree)/include) \
-		-Iinclude -include include/generated/autoconf.h
+		-Iinclude -include include/generated/autoconf.h \
+		-I$(srctree)/arch/$(hdr-arch)/include 
 
 KBUILD_CPPFLAGS := -D__VKERNEL__
 
