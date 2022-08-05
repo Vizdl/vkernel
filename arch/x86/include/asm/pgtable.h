@@ -1,13 +1,7 @@
 #ifndef _I386_PGTABLE_H
 #define _I386_PGTABLE_H
 
-/*
- * The 4MB page is guessing..  Detailed in the infamous "Chapter H"
- * of the Pentium details, but assuming intel did the straightforward
- * thing, this bit set in the page directory entry just means that
- * the page directory entry points directly to a 4MB-aligned block of
- * memory. 
- */
+// 在x86 体系结构中 PTE 中的状态标志位的 bit 位下标
 #define _PAGE_BIT_PRESENT	0
 #define _PAGE_BIT_RW		1
 #define _PAGE_BIT_USER		2
@@ -18,6 +12,7 @@
 #define _PAGE_BIT_PSE		7	/* 4 MB (or 2MB) page, Pentium+, if present.. */
 #define _PAGE_BIT_GLOBAL	8	/* Global TLB entry PPro+ */
 
+// 在x86 体系结构中 PTE 中的状态标志位的值, pte & _PAGE_XXX 就可知 _PAGE_XXX 是否被设置。
 // 页面在内存中并且没有被换出
 #define _PAGE_PRESENT	    0x001
 // 页面可写

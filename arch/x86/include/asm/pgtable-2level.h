@@ -31,10 +31,10 @@
 ((unsigned long) __va(pgd_val(pgd) & PAGE_MASK))
 
 /**
- * @brief	TODO
- * @param	TODO
- * @param	TODO
- * @return	
+ * @brief	通过 页全局目录表项 和 虚拟地址 找到 虚拟地址所对应的页中间目录表项
+ * @param	页全局目录表项
+ * @param	虚拟地址
+ * @return	虚拟地址所对应的页中间目录表项
  */
 extern inline pmd_t * pmd_offset(pgd_t * dir, unsigned long address)
 {
