@@ -1,6 +1,6 @@
 #include <linux/init.h>
 #include <linux/bootmem.h>
-#include <asm/page.h>>
+#include <asm/page.h>
 #include <asm/pgtable.h>
 
 static void __init pagetable_init (void) {
@@ -23,14 +23,8 @@ static void __init pagetable_init (void) {
         // 如若超越了最大帧
 		if (end && (vaddr >= end))
 			break;
-        // 创建 pmd
-#if CONFIG_X86_PAE
-		pmd = (pmd_t *) alloc_bootmem_low_pages(PAGE_SIZE);
-		set_pgd(pgd, __pgd(__pa(pmd) + 0x1));
-#else
         // 如若是二级页表,则 pmd 等于 pgd
 		pmd = (pmd_t *)pgd;
-#endif
         // 如若 pmd 不是 页中间目录表表头的话
 		if (pmd != pmd_offset(pgd, 0))
 			BUG();
@@ -40,20 +34,6 @@ static void __init pagetable_init (void) {
 			vaddr = i*PGDIR_SIZE + j*PMD_SIZE;
 			if (end && (vaddr >= end))
 				break;
-			if (cpu_has_pse) {
-				unsigned long __pe;
-
-				set_in_cr4(X86_CR4_PSE);
-				boot_cpu_data.wp_works_ok = 1;
-				__pe = _KERNPG_TABLE + _PAGE_PSE + __pa(vaddr);
-				/* Make it "global" too if supported */
-				if (cpu_has_pge) {
-					set_in_cr4(X86_CR4_PGE);
-					__pe += _PAGE_GLOBAL;
-				}
-				set_pmd(pmd, __pmd(__pe));
-				continue;
-			}
 
 			pte = (pte_t *) alloc_bootmem_low_pages(PAGE_SIZE);
 			set_pmd(pmd, __pmd(_KERNPG_TABLE + __pa(pte)));
