@@ -1,6 +1,49 @@
 #ifndef _I386_PGTABLE_H
 #define _I386_PGTABLE_H
 
+extern pgd_t swapper_pg_dir[1024];
+extern void paging_init(void);
+
+/* Caches aren't brain-dead on the intel. */
+#define flush_cache_all()					do { } while (0)
+#define flush_cache_mm(mm)					do { } while (0)
+#define flush_cache_range(mm, start, end)	do { } while (0)
+#define flush_cache_page(vma, vmaddr)		do { } while (0)
+#define flush_page_to_ram(page)				do { } while (0)
+#define flush_dcache_page(page)				do { } while (0)
+#define flush_icache_range(start, end)		do { } while (0)
+#define flush_icache_page(vma,pg)			do { } while (0)
+
+#define __flush_tlb()							\
+	do {								\
+		unsigned int tmpreg;					\
+									\
+		__asm__ __volatile__(					\
+			"movl %%cr3, %0;  # flush TLB \n"		\
+			"movl %0, %%cr3;              \n"		\
+			: "=r" (tmpreg)					\
+			:: "memory");					\
+	} while (0)
+
+/*
+ * Global pages have to be flushed a bit differently. Not a real
+ * performance problem because this does not happen often.
+ */
+#define __flush_tlb_global()						\
+	do {								\
+		unsigned int tmpreg;					\
+									\
+		__asm__ __volatile__(					\
+			"movl %1, %%cr4;  # turn off PGE     \n"	\
+			"movl %%cr3, %0;  # flush TLB        \n"	\
+			"movl %0, %%cr3;                     \n"	\
+			"movl %2, %%cr4;  # turn PGE back on \n"	\
+			: "=&r" (tmpreg)				\
+			: "r" (mmu_cr4_features & ~X86_CR4_PGE),	\
+			  "r" (mmu_cr4_features)			\
+			: "memory");					\
+	} while (0)
+
 // 在x86 体系结构中 PTE 中的状态标志位的 bit 位下标
 #define _PAGE_BIT_PRESENT	0
 #define _PAGE_BIT_RW		1
@@ -30,12 +73,42 @@
 // 页面在内存中, 但是不可访问
 #define _PAGE_PROTNONE	    0x080	/* If not present */
 
+// 复合属性
+#define _PAGE_TABLE	(_PAGE_PRESENT | _PAGE_RW | _PAGE_USER | _PAGE_ACCESSED | _PAGE_DIRTY)
+#define _KERNPG_TABLE	(_PAGE_PRESENT | _PAGE_RW | _PAGE_ACCESSED | _PAGE_DIRTY)
+#define _PAGE_CHG_MASK	(PTE_MASK | _PAGE_ACCESSED | _PAGE_DIRTY)
+
+#define PAGE_NONE	__pgprot(_PAGE_PROTNONE | _PAGE_ACCESSED)
+#define PAGE_SHARED	__pgprot(_PAGE_PRESENT | _PAGE_RW | _PAGE_USER | _PAGE_ACCESSED)
+#define PAGE_COPY	__pgprot(_PAGE_PRESENT | _PAGE_USER | _PAGE_ACCESSED)
+#define PAGE_READONLY	__pgprot(_PAGE_PRESENT | _PAGE_USER | _PAGE_ACCESSED)
+
+#define __PAGE_KERNEL \
+	(_PAGE_PRESENT | _PAGE_RW | _PAGE_DIRTY | _PAGE_ACCESSED)
+#define __PAGE_KERNEL_NOCACHE \
+	(_PAGE_PRESENT | _PAGE_RW | _PAGE_DIRTY | _PAGE_PCD | _PAGE_ACCESSED)
+#define __PAGE_KERNEL_RO \
+	(_PAGE_PRESENT | _PAGE_DIRTY | _PAGE_ACCESSED)
+
 #include <asm/pgtable-2level.h>
+
+#define PMD_SIZE	(1UL << PMD_SHIFT)
+#define PMD_MASK	(~(PMD_SIZE-1))
+#define PGDIR_SIZE	(1UL << PGDIR_SHIFT)
+#define PGDIR_MASK	(~(PGDIR_SIZE-1))
 
 // 判断 pte 是否可用(不在内存中或不可访问都为不可用)
 #define pte_present(x)	((x).pte_low & (_PAGE_PRESENT | _PAGE_PROTNONE))
 // 将 xp 的内容设置为 0
 #define pte_clear(xp)	do { set_pte(xp, __pte(0)); } while (0)
+
+/**
+ * @brief 根据页中间目录项找到其页表项表头的虚拟地址
+ * @param pmd_t
+ * @return pte_t* ,页表项表头的虚拟地址
+ */
+#define pmd_page(pmd) \
+((unsigned long) __va(pmd_val(pmd) & PAGE_MASK))
 
 /**
  * @brief 获取虚拟地址在 pgd 表中的索引
@@ -44,6 +117,21 @@
  */
 #define pgd_index(address) ((address >> PGDIR_SHIFT) & (PTRS_PER_PGD-1))
 #define __pgd_offset(address) pgd_index(address)
+
+/**
+ * @brief 从指定 mm_struct 对应的页表 获取 虚拟地址 对应的 页中间表项指针
+ * @param struct mm_struct*
+ * @param 虚拟地址
+ * @return pmd_t *, 页中间表项指针
+ */
+#define pgd_offset(mm, address) ((mm)->pgd+pgd_index(address))
+
+/**
+ * @brief 获取 属于内核空间的虚拟地址 对应的 页中间表项指针
+ * @param 虚拟地址
+ * @return pmd_t *, 页中间表项指针
+ */
+#define pgd_offset_k(address) pgd_offset(&init_mm, address)
 
 /**
  * @brief 获取虚拟地址在 pmd 表中的索引
@@ -60,5 +148,14 @@
  */
 #define __pte_offset(address) \
 		((address >> PAGE_SHIFT) & (PTRS_PER_PTE - 1))
-        
+
+/**
+ * @brief 根据 页中间目录表项 和 虚拟地址 获取 对应的 页表项
+ * @param pmd_t *, 页中间目录表项指针
+ * @param unsigned long, 虚拟地址
+ * @return pte_t *,页表项指针(虚拟地址)
+ */
+#define pte_offset(dir, address) ((pte_t *) pmd_page(*(dir)) + \
+			__pte_offset(address))
+
 #endif /* _I386_PGTABLE_H */
