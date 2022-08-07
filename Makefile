@@ -230,6 +230,9 @@ ifeq ($(ARCH),x86_64)
         SRCARCH := x86
 endif
 
+# Where to locate arch specific headers
+hdr-arch  := $(SRCARCH)
+
 KCONFIG_CONFIG	?= .config
 export KCONFIG_CONFIG
 
@@ -286,7 +289,8 @@ AFLAGS_KERNEL	=
 # Needed to be compatible with the O= option
 VKERNELINCLUDE    := \
 		$(if $(KBUILD_SRC), -I$(srctree)/include) \
-		-Iinclude -include include/generated/autoconf.h
+		-Iinclude -include include/generated/autoconf.h \
+		-I$(srctree)/arch/$(hdr-arch)/include 
 
 KBUILD_CPPFLAGS := -D__VKERNEL__
 
@@ -590,7 +594,7 @@ export	INSTALL_PATH ?= ./install
 
 
 objs-y		:= arch/$(SRCARCH)
-libs-y		:=
+libs-y		:= lib
 
 vkernel-dirs	:= $(objs-y) $(libs-y)
 vkernel-objs	:= $(patsubst %,%/built-in.o, $(objs-y))
@@ -753,7 +757,7 @@ help:
 	@echo  ''
 	@echo  'Other generic targets:'
 	@echo  '  all		  - Build all targets marked with [*]'
-	@echo  '* vkernel		  - Build the application'
+	@echo  '* vkernel		  - Build the vkernel'
 	@echo  '  dir/            - Build all files in dir and below'
 	@echo  '  dir/file.[ois]  - Build specified target only'
 	@echo  '  dir/file.lst    - Build specified mixed source/assembly target only'
