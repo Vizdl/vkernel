@@ -292,7 +292,7 @@ VKERNELINCLUDE    := \
 		-Iinclude -include include/generated/autoconf.h \
 		-I$(srctree)/arch/$(hdr-arch)/include 
 
-KBUILD_CPPFLAGS := -D__VKERNEL__
+KBUILD_CPPFLAGS := -D__KERNEL__
 
 KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs \
 		   -fno-strict-aliasing -fno-common \
@@ -593,8 +593,8 @@ export KBUILD_IMAGE ?= vkernel
 export	INSTALL_PATH ?= ./install
 
 
-objs-y		:= arch/$(SRCARCH)
-libs-y		:= lib
+objs-y		:= arch/$(SRCARCH) lib kernel 
+libs-y		:= 
 
 vkernel-dirs	:= $(objs-y) $(libs-y)
 vkernel-objs	:= $(patsubst %,%/built-in.o, $(objs-y))
