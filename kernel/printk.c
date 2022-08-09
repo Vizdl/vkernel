@@ -16,15 +16,17 @@ MAKE_COLOR(BLACK, RED) | BRIGHT | FLASH
 #define TEXT_BRIGHT  0x08    /* 0000 1000 */
 #define	MAKE_COLOR(x,y)	((x<<4) | y) /* MAKE_COLOR(Background,Foreground) */
 
-#define DISPLAY_VRAM 0xc00b8000
+extern int is_boot_time;
 
+#define DISPLAY_VRAM 0xc00b8000
+#define DISPLAY_VRAM_BOOT 0xb8000
 #define	CRTC_ADDR_REG	0x3D4	/* CRT Controller Registers - Addr Register */
 #define	CRTC_DATA_REG	0x3D5	/* CRT Controller Registers - Data Register */
 #define	START_ADDR_H	0xC	/* reg index of video mem start addr (MSB) */
 #define	START_ADDR_L	0xD	/* reg index of video mem start addr (LSB) */
 #define	CURSOR_H	    0xE	/* reg index of cursor position (MSB) */
 #define	CURSOR_L	    0xF	/* reg index of cursor position (LSB) */
-#define	V_MEM_BASE	    DISPLAY_VRAM	/* base of color video memory */
+#define	V_MEM_BASE	    (is_boot_time ? DISPLAY_VRAM_BOOT : DISPLAY_VRAM)	/* base of color video memory */
 
 #define SCREEN_UP -1
 #define SCREEN_DOWN 1

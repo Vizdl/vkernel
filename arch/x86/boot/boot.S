@@ -117,7 +117,7 @@ multiboot_entry:
 
 	/* Halt. */
 	pushl $halt_message
-	call EXT_C(cprintf)
+	call EXT_C(printk)
 
 loop:
 	hlt

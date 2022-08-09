@@ -16,84 +16,58 @@
  */
 
 #include "multiboot2.h"
+#include <linux/kernel.h>
+#include <linux/init.h>
 
-/* Macros. */
-
-/* Some screen stuff. */
-/* The number of columns. */
-#define COLUMNS 80
-/* The number of lines. */
-#define LINES 24
-/* The attribute of an character. */
-#define ATTRIBUTE 7
-/* The video memory address. */
-#define VIDEO 0xB8000
-
-/* Variables. */
-/* Save the X position. */
-static int xpos;
-/* Save the Y position. */
-static int ypos;
-/* Point to the video memory. */
-static volatile unsigned char *video;
-
-/* Forward declarations. */
-void cmain(unsigned long magic, unsigned long addr);
-static void cls(void);
-static void itoa(char *buf, int base, int d);
-static void putchar(int c);
-void cprintf(const char *format, ...);
+int is_boot_time __initdata = 1;
 
 /* Check if MAGIC is valid and print the Multiboot information structure pointed by ADDR. */
-void cmain(unsigned long magic, unsigned long addr)
+void __init cmain(unsigned long magic, unsigned long addr)
 {
 	struct multiboot_tag *tag;
 	unsigned size;
 
-	/* Clear the screen. */
-	cls();
-
 	/* Am I booted by a Multiboot-compliant boot loader? */
 	if (magic != MULTIBOOT2_BOOTLOADER_MAGIC)
 	{
-		cprintf("Invalid magic number: 0x%x\n", (unsigned)magic);
+		printk("Invalid magic number: 0x%x\n", (unsigned)magic);
 		return;
 	}
 
 	if (addr & 7)
 	{
-		cprintf("Unaligned mbi: 0x%x\n", addr);
+		printk("Unaligned mbi: 0x%x\n", addr);
 		return;
 	}
 
 	size = *(unsigned *)addr;
-	cprintf("Announced mbi size 0x%x\n", size);
+	printk("Announced mbi size 0x%x\n", size);
 	for (tag = (struct multiboot_tag *)(addr + 8);
 		 tag->type != MULTIBOOT_TAG_TYPE_END;
 		 tag = (struct multiboot_tag *)((multiboot_uint8_t *)tag + ((tag->size + 7) & ~7)))
 	{
-		cprintf("Tag 0x%x, Size 0x%x\n", tag->type, tag->size);
+		printk("Tag 0x%x, Size 0x%x\n", tag->type, tag->size);
 		switch (tag->type)
 		{
 		case MULTIBOOT_TAG_TYPE_CMDLINE:
-			cprintf("Command line = %s\n", ((struct multiboot_tag_string *)tag)->string);
+			printk("Command line = %s\n", ((struct multiboot_tag_string *)tag)->string);
 			break;
 		case MULTIBOOT_TAG_TYPE_BOOT_LOADER_NAME:
-			cprintf("Boot loader name = %s\n", ((struct multiboot_tag_string *)tag)->string);
+			printk("Boot loader name = %s\n", ((struct multiboot_tag_string *)tag)->string);
 			break;
 		case MULTIBOOT_TAG_TYPE_MODULE:
-			cprintf("Module at 0x%x-0x%x. Command line %s\n",
+			printk("Module at 0x%x-0x%x. Command line %s\n",
 					((struct multiboot_tag_module *)tag)->mod_start,
 					((struct multiboot_tag_module *)tag)->mod_end,
 					((struct multiboot_tag_module *)tag)->cmdline);
 			break;
 		case MULTIBOOT_TAG_TYPE_BASIC_MEMINFO:
-			cprintf("mem_lower = %uKB, mem_upper = %uKB\n",
+			printk("mem_lower = %uKB, mem_upper = %uKB\n",
 					((struct multiboot_tag_basic_meminfo *)tag)->mem_lower,
 					((struct multiboot_tag_basic_meminfo *)tag)->mem_upper);
 			break;
 		case MULTIBOOT_TAG_TYPE_BOOTDEV:
-			cprintf("Boot device 0x%x,%u,%u\n",
+			printk("Boot device 0x%x,%u,%u\n",
 					((struct multiboot_tag_bootdev *)tag)->biosdev,
 					((struct multiboot_tag_bootdev *)tag)->slice,
 					((struct multiboot_tag_bootdev *)tag)->part);
@@ -102,12 +76,12 @@ void cmain(unsigned long magic, unsigned long addr)
 		{
 			multiboot_memory_map_t *mmap;
 
-			cprintf("mmap\n");
+			printk("mmap\n");
 
 			for (mmap = ((struct multiboot_tag_mmap *)tag)->entries;
 				 (multiboot_uint8_t *)mmap < (multiboot_uint8_t *)tag + tag->size;
 				 mmap = (multiboot_memory_map_t *)((unsigned long)mmap + ((struct multiboot_tag_mmap *)tag)->entry_size))
-				cprintf(" base_addr = 0x%x%x,"
+				printk(" base_addr = 0x%x%x,"
 						" length = 0x%x%x, type = 0x%x\n",
 						(unsigned)(mmap->addr >> 32),
 						(unsigned)(mmap->addr & 0xffffffff),
@@ -196,146 +170,5 @@ void cmain(unsigned long magic, unsigned long addr)
 		}
 	}
 	tag = (struct multiboot_tag *)((multiboot_uint8_t *)tag + ((tag->size + 7) & ~7));
-	cprintf("Total mbi size 0x%x\n", (unsigned)tag - addr);
-}
-
-/* Clear the screen and initialize VIDEO, XPOS and YPOS. */
-static void cls(void)
-{
-	int i;
-
-	video = (unsigned char *)VIDEO;
-
-	for (i = 0; i < COLUMNS * LINES * 2; i++)
-		*(video + i) = 0;
-
-	xpos = 0;
-	ypos = 0;
-}
-
-/* Convert the integer D to a string and save the string in BUF. If
-BASE is equal to ’d’, interpret that D is decimal, and if BASE is
-equal to ’x’, interpret that D is hexadecimal. */
-static void itoa(char *buf, int base, int d)
-{
-	char *p = buf;
-	char *p1, *p2;
-	unsigned long ud = d;
-	int divisor = 10;
-
-	/* If %d is specified and D is minus, put ‘-’ in the head. */
-	if (base == 'd' && d < 0)
-	{
-		*p++ = '-';
-		buf++;
-		ud = -d;
-	}
-	else if (base == 'x')
-		divisor = 16;
-
-	/* Divide UD by DIVISOR until UD == 0. */
-	do
-	{
-		int remainder = ud % divisor;
-		*p++ = (remainder < 10) ? remainder + '0' : remainder + 'a' - 10;
-	} while (ud /= divisor);
-
-	/* Terminate BUF. */
-	*p = 0;
-
-	/* Reverse BUF. */
-	p1 = buf;
-	p2 = p - 1;
-	while (p1 < p2)
-	{
-		char tmp = *p1;
-		*p1 = *p2;
-		*p2 = tmp;
-		p1++;
-		p2--;
-	}
-}
-
-/* Put the character C on the screen. */
-static void putchar(int c)
-{
-	if (c == '\n' || c == '\r')
-	{
-	newline:
-		xpos = 0;
-		ypos++;
-		if (ypos >= LINES)
-			ypos = 0;
-		return;
-	}
-
-	*(video + (xpos + ypos * COLUMNS) * 2) = c & 0xFF;
-	*(video + (xpos + ypos * COLUMNS) * 2 + 1) = ATTRIBUTE;
-
-	xpos++;
-	if (xpos >= COLUMNS)
-		goto newline;
-}
-
-/* Format a string and print it on the screen, just like the libc
-function cprintf. */
-void cprintf(const char *format, ...)
-{
-	char **arg = (char **)&format;
-	int c;
-	char buf[20];
-
-	arg++;
-
-	while ((c = *format++) != 0)
-	{
-		if (c != '%')
-			putchar(c);
-		else
-		{
-			char *p, *p2;
-			int pad0 = 0, pad = 0;
-
-			c = *format++;
-			if (c == '0')
-			{
-				pad0 = 1;
-				c = *format++;
-			}
-
-			if (c >= '0' && c <= '9')
-			{
-				pad = c - '0';
-				c = *format++;
-			}
-			switch (c)
-			{
-			case 'd':
-			case 'u':
-			case 'x':
-				itoa(buf, c, *((int *)arg++));
-				p = buf;
-				goto string;
-				break;
-
-			case 's':
-				p = *arg++;
-				if (!p)
-					p = "(null)";
-
-			string:
-				for (p2 = p; *p2; p2++)
-					;
-				for (; p2 < p + pad; p2++)
-					putchar(pad0 ? '0' : ' ');
-				while (*p)
-					putchar(*p++);
-				break;
-
-			default:
-				putchar(*((int *)arg++));
-				break;
-			}
-		}
-	}
+	printk("Total mbi size 0x%x\n", (unsigned)tag - addr);
 }
