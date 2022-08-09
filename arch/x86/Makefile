@@ -8,14 +8,15 @@ PHONY += vimage
 all: vimage
 
 vimage: vkernel
-	if [[ ! -f $(KBUILD_IMAGE).img ]]; \
+	$(Q)if [[ ! -f $(KBUILD_IMAGE).img ]]; \
 	then \
-		scripts/mk_hd.sh ./$(KBUILD_IMAGE).img 60 && \
+		scripts/mk_hd.sh ./$(KBUILD_IMAGE).img 60 > /dev/null && \
 		scripts/fomat_hd.sh \
 		$(KBUILD_IMAGE).img \
 		$(KBUILD_IMAGE) \
 		arch/$(ARCH)/boot/grub \
-		arch/$(ARCH)/boot/grub.cfg; \
+		arch/$(ARCH)/boot/grub.cfg \
+		>/dev/null; \
 	fi
 
 PHONY += bochsrun

@@ -18,4 +18,4 @@ expect {
 expect "Command (m for help)" {send "w\n";exp_continue} 
 EOF
 # 展示磁盘分区
-sudo fdisk -l  $dest
+# sudo fdisk -l  $dest
