@@ -21,6 +21,8 @@
 
 int is_boot_time __initdata = 1;
 
+extern void start_kernel(void);
+
 /* Check if MAGIC is valid and print the Multiboot information structure pointed by ADDR. */
 void __init cmain(unsigned long magic, unsigned long addr)
 {
@@ -171,4 +173,5 @@ void __init cmain(unsigned long magic, unsigned long addr)
 	}
 	tag = (struct multiboot_tag *)((multiboot_uint8_t *)tag + ((tag->size + 7) & ~7));
 	printk("Total mbi size 0x%x\n", (unsigned)tag - addr);
+	start_kernel();
 }
