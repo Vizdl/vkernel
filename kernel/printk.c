@@ -1,5 +1,5 @@
-#include <linux/string.h>
-#include <linux/kernel.h>
+#include <vkernel/string.h>
+#include <vkernel/kernel.h>
 
 /*
 颜色生成方法

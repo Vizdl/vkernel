@@ -10,9 +10,9 @@
  */
 
 // #include <stdarg.h>
-#include <linux/types.h>
-#include <linux/string.h>
-#include <linux/ctype.h>
+#include <vkernel/types.h>
+#include <vkernel/string.h>
+#include <vkernel/ctype.h>
 #include <asm/div64.h>
 
 // TODO : 将这个放在合适的位置

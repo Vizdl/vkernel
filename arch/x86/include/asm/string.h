@@ -2,7 +2,7 @@
 #define _I386_STRING_H_
 
 #ifdef __KERNEL__
-#include <linux/config.h>
+#include <vkernel/config.h>
 
 /*
  * This string-include defines all string functions as inline
@@ -279,9 +279,9 @@ __asm__ __volatile__( \
 
 #include <asm/system.h>
 #include <asm/ptrace.h>
-#include <linux/smp.h>
-#include <linux/spinlock.h>
-#include <linux/interrupt.h>
+#include <vkernel/smp.h>
+#include <vkernel/spinlock.h>
+#include <vkernel/interrupt.h>
 #include <asm/mmx.h>
 
 /*

@@ -2,10 +2,10 @@
 #define _LINUX_TYPES_H
 
 #ifdef	__KERNEL__
-#include <linux/config.h>
+#include <vkernel/config.h>
 #endif
 
-#include <linux/posix_types.h>
+#include <vkernel/posix_types.h>
 #include <asm/types.h>
 
 #ifndef __KERNEL_STRICT_NAMES

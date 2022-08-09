@@ -16,8 +16,8 @@
  */
 
 #include "multiboot2.h"
-#include <linux/kernel.h>
-#include <linux/init.h>
+#include <vkernel/kernel.h>
+#include <vkernel/init.h>
 
 int is_boot_time __initdata = 1;
 
