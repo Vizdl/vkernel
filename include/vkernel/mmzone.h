@@ -15,6 +15,7 @@ typedef struct pglist_data {
 	struct pglist_data *node_next;
 } pg_data_t;
 
+extern pg_data_t *pgdat_list;
 extern pg_data_t contig_page_data;
 
 #endif /* !__ASSEMBLY__ */
