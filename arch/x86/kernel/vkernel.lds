@@ -4,12 +4,17 @@ OUTPUT_FORMAT(elf32-i386)
 SECTIONS
 {
   . = 0x100000;
-  .grub.header : 
-  { 
-    *(.grub.header) 
+	.text.init : 
+	{ 
+	*(.text.init) 
 	  . = ALIGN(4096);
-  }
-  .text : { *(.text) }
-  .data : { *(.data) }
-  .bss : { *(.bss) }
+	}
+	.data.init :
+	{
+		*(.data.init)
+		. = ALIGN(8192);
+	}
+	.text : { *(.text) }
+	.data : { *(.data) }
+	.bss : { *(.bss) }
 }
