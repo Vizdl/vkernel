@@ -757,7 +757,7 @@ help:
 	@echo  ''
 	@echo  'Other generic targets:'
 	@echo  '  all		  - Build all targets marked with [*]'
-	@echo  '* vkernel		  - Build the vkernel'
+	@echo  '* vkernel	  - Build the vkernel'
 	@echo  '  dir/            - Build all files in dir and below'
 	@echo  '  dir/file.[ois]  - Build specified target only'
 	@echo  '  dir/file.lst    - Build specified mixed source/assembly target only'
