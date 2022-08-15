@@ -303,8 +303,9 @@ KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs \
 KBUILD_AFLAGS_KERNEL :=
 KBUILD_CFLAGS_KERNEL :=
 KBUILD_AFLAGS   := -D__ASSEMBLY__ -c -fno-builtin -W -Wstrict-prototypes
-KBUILD_LDS	:= arch/$(SRCARCH)/kernel/vkernel.lds
-LDFLAGS 	:= -T $(KBUILD_LDS)
+KBUILD_LDS	:= arch/$(SRCARCH)/vkernel.lds
+LDFLAGS 	:=
+VKERNEL_LDFLAGS := -T $(KBUILD_LDS)
 KERNELVERSION = $(VERSION)$(if $(PATCHLEVEL),.$(PATCHLEVEL)$(if $(SUBLEVEL),.$(SUBLEVEL)))$(EXTRAVERSION)
 
 export VERSION PATCHLEVEL SUBLEVEL KERNELVERSION
@@ -313,7 +314,7 @@ export CPP AR NM STRIP OBJCOPY OBJDUMP
 export MAKE AWK PERL PYTHON
 export HOSTCXX HOSTCXXFLAGS CHECK CHECKFLAGS
 
-export KBUILD_CPPFLAGS NOSTDINC_FLAGS VKERNELINCLUDE OBJCOPYFLAGS LDFLAGS
+export KBUILD_CPPFLAGS NOSTDINC_FLAGS VKERNELINCLUDE OBJCOPYFLAGS LDFLAGS  VKERNEL_LDFLAGS
 export KBUILD_CFLAGS CFLAGS_KERNEL
 export KBUILD_AFLAGS AFLAGS_KERNEL
 export KBUILD_AFLAGS_KERNEL KBUILD_CFLAGS_KERNEL
@@ -602,7 +603,7 @@ vkernel-libs	:= $(patsubst %,%/lib.a, $(libs-y))
 vkernel-all		:= $(vkernel-objs) $(vkernel-libs)
 
 quiet_cmd_vkernel = LD      $@
-      cmd_vkernel = $(LD) $(LDFLAGS) -o $@  $(vkernel-libs) $(vkernel-objs)
+      cmd_vkernel = $(LD) $(VKERNEL_LDFLAGS) -o $@  $(vkernel-libs) $(vkernel-objs)
 
 vkernel: $(vkernel-all) FORCE
 	+$(call if_changed,vkernel)

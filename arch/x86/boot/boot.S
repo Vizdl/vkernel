@@ -67,9 +67,9 @@ address_tag_start:
 	/* load_addr */
 	.long multiboot_start
 	/* load_end_addr */
-	.long _edata
+	.long multiboot_edata
 	/* bss end addr */
-	.long _end
+	.long multiboot_end
 address_tag_end:
 
 	.align 8
