@@ -1,5 +1,9 @@
 #include <vkernel/init.h>
 #include <vkernel/kernel.h>
+#include <asm/page.h>
+#include <asm/pgtable.h>
+
+pgd_t swapper_pg_dir[PTRS_PER_PGD] __page_aligned;
 
 static void __init pagetable_init (void)
 {

@@ -7,6 +7,8 @@
 #define PAGE_SIZE	(1UL << PAGE_SHIFT)
 // ~(2^12-1) = ~(0x0000ffff) = 0xffff0000
 #define PAGE_MASK	(~(PAGE_SIZE-1))
+// 按页面对齐
+#define __page_aligned __attribute__((__aligned__(PAGE_SIZE)))
 
 /**
  * @brief 
