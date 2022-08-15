@@ -4,6 +4,7 @@ LDFLAGS += -m elf_i386
 obj-y += boot/
 obj-y += kernel/
 obj-y += mm/
+obj-y += lib/
 
 PHONY += vimage
 

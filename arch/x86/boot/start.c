@@ -1,29 +1,41 @@
-/* kernel.c - the C part of the kernel */
-/* Copyright (C) 1999, 2010 Free Software Foundation, Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
- */
-
-#include "multiboot2.h"
+#include "asm/multiboot2.h"
 #include <vkernel/kernel.h>
 #include <vkernel/init.h>
+#include <vkernel/types.h>
+#include <asm/gdt.h>
+#include <asm/page.h>
 
 int is_boot_time __initdata = 1;
-
 extern void start_kernel(void);
 
-/* Check if MAGIC is valid and print the Multiboot information structure pointed by ADDR. */
+__init void gdt_create(void)
+{
+	uint64_t gdtr;
+    gdt_table[0] = make_gdt_desc((uint32_t*)0, 0, 0, 0);
+	// 内核代码段
+    gdt_table[1] = make_gdt_desc((uint32_t*)0, 0xfffff, GDT_CODE_ATTR_LOW_DPL0, GDT_ATTR_HIGH);
+	// 内核数据段
+    gdt_table[2] = make_gdt_desc((uint32_t*)0, 0xfffff, GDT_DATA_ATTR_LOW_DPL0, GDT_ATTR_HIGH);
+	// 内核显存段,这里虽然设置为 0xb8000,但 printk 仍然是利用数据段来设置显存。
+    gdt_table[3] = make_gdt_desc((uint32_t*)0xb8000, 0xfffff, GDT_DATA_ATTR_LOW_DPL0, GDT_ATTR_HIGH);
+
+    gdtr = ((sizeof(gdt_table) - 1) | ((uint64_t)(uint32_t)gdt_table << 16));
+    load_gdtr(gdtr);
+    flush_cs(SELECTOR_K_CODE);
+    flush_ds(SELECTOR_K_DATA);
+    flush_ss(SELECTOR_K_STACK);
+    flush_gs(SELECTOR_K_GS);
+}
+
+void __init test_multiboot (void)
+{
+	// 测试 cr0 的值
+    uint32_t cr0;
+	asm volatile ("mov %%cr0, %0" : "=r" (cr0));
+	printk("cr0 = %x\n", cr0);
+	start_kernel();
+}
+
 void __init cmain(unsigned long magic, unsigned long addr)
 {
 	struct multiboot_tag *tag;
@@ -173,5 +185,6 @@ void __init cmain(unsigned long magic, unsigned long addr)
 	}
 	tag = (struct multiboot_tag *)((multiboot_uint8_t *)tag + ((tag->size + 7) & ~7));
 	printk("Total mbi size 0x%x\n", (unsigned)tag - addr);
-	start_kernel();
+	gdt_create();
+	test_multiboot();
 }

@@ -1,6 +1,10 @@
 #ifndef _I386_PGTABLE_H
 #define _I386_PGTABLE_H
 
+#ifndef _I386_BITOPS_H
+#include <asm/bitops.h>
+#endif
+
 extern pgd_t swapper_pg_dir[1024];
 extern void paging_init(void);
 

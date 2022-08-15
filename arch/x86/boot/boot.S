@@ -16,7 +16,7 @@
 */
 
 #define ASM_FILE 1
-#include "multiboot2.h"
+#include "asm/multiboot2.h"
 
 /* C symbol format. HAVE ASM USCORE is defined by configure. */
 #ifdef HAVE_ASM_USCORE
