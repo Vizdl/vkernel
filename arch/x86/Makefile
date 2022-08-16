@@ -11,17 +11,17 @@ PHONY += vimage
 
 all: vimage
 
+quiet_cmd_mk_vimage = MK      $@
+cmd_mk_vimage = rm -rf ./$(KBUILD_IMAGE).img && \
+	scripts/mk_hd.sh ./$(KBUILD_IMAGE).img 60 > /dev/null && \
+	scripts/fomat_hd.sh \
+	$(KBUILD_IMAGE).img \
+	$(KBUILD_IMAGE) \
+	arch/$(ARCH)/boot/grub \
+	arch/$(ARCH)/boot/grub.cfg > /dev/null
+
 vimage: vkernel
-	$(Q)if [[ ! -f $(KBUILD_IMAGE).img ]]; \
-	then \
-		scripts/mk_hd.sh ./$(KBUILD_IMAGE).img 60 > /dev/null && \
-		scripts/fomat_hd.sh \
-		$(KBUILD_IMAGE).img \
-		$(KBUILD_IMAGE) \
-		arch/$(ARCH)/boot/grub \
-		arch/$(ARCH)/boot/grub.cfg \
-		>/dev/null; \
-	fi
+	+$(call if_changed,mk_vimage)
 
 PHONY += bochsrun
 

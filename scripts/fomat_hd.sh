@@ -7,9 +7,9 @@ mountdir=/tmp/mountdir
 # 1. 虚拟化虚拟硬盘为块设备
 dev=`losetup --partscan --show --find $dest`
 # 2. 查找分区块设备名
-subdev=`ls ${dev}p* -1`
-# echo "dev is : $dev"
-# echo "subdev is : $subdev"
+subdev="${dev}p1" # 如若利用 ls 访问 $subdev 则可能不存在
+#echo "dev is : $dev"
+#echo "subdev is : $subdev"
 # echo "mountdir is : $mountdir"
 # 格式化分区
 mkfs.ext2 $subdev
