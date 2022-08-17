@@ -1,8 +1,9 @@
 #include <asm/gdt.h>
+#include <vkernel/init.h>
 
 struct gdt_desc gdt_table[GDT_TABLE_SIZE];
 
-struct gdt_desc make_gdt_desc(uint32_t* desc_addr, uint32_t limit, uint8_t attr_low, uint8_t attr_high) {
+struct gdt_desc __init make_gdt_desc(uint32_t* desc_addr, uint32_t limit, uint8_t attr_low, uint8_t attr_high) {
     uint32_t desc_base = (uint32_t)desc_addr;
     struct gdt_desc desc;
     desc.limit_low_word = limit & 0x0000ffff;

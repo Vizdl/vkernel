@@ -7,6 +7,16 @@
 #define PAGE_SIZE	(1UL << PAGE_SHIFT)
 // ~(2^12-1) = ~(0x0000ffff) = 0xffff0000
 #define PAGE_MASK	(~(PAGE_SIZE-1))
+
+#define PTE_MASK	PAGE_MASK
+
+// 线性映射偏移量, 3GB
+#define __PAGE_OFFSET   (0xC0000000)
+
+#define PAGE_OFFSET		((unsigned long)__PAGE_OFFSET)
+
+#ifndef __ASSEMBLY__
+
 // 按页面对齐
 #define __page_aligned __attribute__((__aligned__(PAGE_SIZE)))
 
@@ -24,8 +34,6 @@ typedef struct { unsigned long pmd; } pmd_t;
 typedef struct { unsigned long pgd; } pgd_t;
 // 存储保护位
 typedef struct { unsigned long pgprot; } pgprot_t;
-
-#define PTE_MASK	PAGE_MASK
 
 /**
  * @brief	通过 pte_t/pmd_t/pgt_t/pgprot_t 结构体提取出内部的 unsigned long
@@ -54,10 +62,6 @@ typedef struct { unsigned long pgprot; } pgprot_t;
  */
 #define PAGE_ALIGN(addr)    (((addr)+PAGE_SIZE-1)&PAGE_MASK)
 
-// 线性映射偏移量, 3GB
-#define __PAGE_OFFSET   (0xC0000000)
-
-#define PAGE_OFFSET		((unsigned long)__PAGE_OFFSET)
 /**
  * @brief	根据虚拟地址计算物理地址
  * @param	虚拟地址
@@ -71,4 +75,5 @@ typedef struct { unsigned long pgprot; } pgprot_t;
  */
 #define __va(x)			((void *)((unsigned long)(x)+PAGE_OFFSET))
 
+#endif /* __ASSEMBLY__ */
 #endif /* _I386_PAGE_H */

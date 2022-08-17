@@ -16,6 +16,7 @@
 */
 
 #define ASM_FILE 1
+#include <asm/page.h>
 #include <asm/multiboot2.h>
 
 /* C symbol format. HAVE ASM USCORE is defined by configure. */
@@ -101,7 +102,9 @@ framebuffer_tag_end:
 multiboot_header_end:
 multiboot_entry:
 	/* Initialize the stack pointer. */
+	movl $__PAGE_OFFSET, %ecx
 	movl $(stack + STACK_SIZE), %esp
+	subl %ecx, %esp
 
 	/* Reset EFLAGS. */
 	pushl $0
