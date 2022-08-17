@@ -90,4 +90,12 @@ extern void * __init __alloc_bootmem_node (pg_data_t *pgdat, unsigned long size,
  */
 extern void __init free_bootmem (unsigned long addr, unsigned long size);
 
+/**
+ * @brief 从物理地址 0 寻找页面对齐大小为 x byte 的物理页
+ * @param x 要申请的内存大小
+ * @return void* 虚拟地址
+ */
+#define alloc_bootmem_low_pages(x) \
+	__alloc_bootmem((x), PAGE_SIZE, 0)
+
 #endif // _LINUX_BOOTMEM_H

@@ -5,8 +5,8 @@
 #include <asm/bitops.h>
 #endif
 
-extern pgd_t swapper_pg_dir[1024];
-extern void paging_init(void);
+#define load_cr3(pgdir) \
+	asm volatile("movl %0,%%cr3": :"r" (pgdir));
 
 /* Caches aren't brain-dead on the intel. */
 #define flush_cache_all()					do { } while (0)
@@ -94,6 +94,17 @@ extern void paging_init(void);
 #define __PAGE_KERNEL_RO \
 	(_PAGE_PRESENT | _PAGE_DIRTY | _PAGE_ACCESSED)
 
+#define PAGE_KERNEL MAKE_GLOBAL(__PAGE_KERNEL)
+#define PAGE_KERNEL_RO MAKE_GLOBAL(__PAGE_KERNEL_RO)
+#define PAGE_KERNEL_NOCACHE MAKE_GLOBAL(__PAGE_KERNEL_NOCACHE)
+
+# define MAKE_GLOBAL(x)						\
+	({							\
+		pgprot_t __ret;					\
+		__ret = __pgprot(x);			\
+		__ret;						\
+	})
+
 #include <asm/pgtable-2level.h>
 
 #define PMD_SIZE	(1UL << PMD_SHIFT)
@@ -135,6 +146,17 @@ static inline  int ptep_test_and_clear_dirty(pte_t *ptep)	{ return test_and_clea
 static inline  int ptep_test_and_clear_young(pte_t *ptep)	{ return test_and_clear_bit(_PAGE_BIT_ACCESSED, ptep); }
 static inline void ptep_set_wrprotect(pte_t *ptep)		{ clear_bit(_PAGE_BIT_RW, ptep); }
 static inline void ptep_mkdirty(pte_t *ptep)			{ set_bit(_PAGE_BIT_DIRTY, ptep); }
+
+#define mk_pte(page, pgprot)	__mk_pte((page) - mem_map, (pgprot))
+
+#define mk_pte_phys(physpage, pgprot)	__mk_pte((physpage) >> PAGE_SHIFT, pgprot)
+
+static inline pte_t pte_modify(pte_t pte, pgprot_t newprot)
+{
+	pte.pte_low &= _PAGE_CHG_MASK;
+	pte.pte_low |= pgprot_val(newprot);
+	return pte;
+}
 
 /**
  * @brief 根据页中间目录项找到其页表项表头的虚拟地址
@@ -191,5 +213,8 @@ static inline void ptep_mkdirty(pte_t *ptep)			{ set_bit(_PAGE_BIT_DIRTY, ptep);
  */
 #define pte_offset(dir, address) ((pte_t *) pmd_page(*(dir)) + \
 			__pte_offset(address))
+
+extern pgd_t swapper_pg_dir[PTRS_PER_PGD];
+extern void paging_init(void);
 
 #endif /* _I386_PGTABLE_H */

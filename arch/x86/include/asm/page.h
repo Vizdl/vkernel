@@ -16,14 +16,16 @@
  * 1. 起到类型保护的作用,避免被不恰当的使用(例如直接加减)
  * 2. 可拓展(后续如若有更改则对外提供的接口与数据类型不需改变)
  */
-// 页全局目录
+// 页全局目录, 内部的地址是物理地址。
 typedef struct { unsigned long pte_low; } pte_t;
-// 页中间目录
+// 页中间目录, 内部的地址是物理地址。
 typedef struct { unsigned long pmd; } pmd_t;
-// 页表项
+// 页表项, 内部的地址是物理地址。
 typedef struct { unsigned long pgd; } pgd_t;
 // 存储保护位
 typedef struct { unsigned long pgprot; } pgprot_t;
+
+#define PTE_MASK	PAGE_MASK
 
 /**
  * @brief	通过 pte_t/pmd_t/pgt_t/pgprot_t 结构体提取出内部的 unsigned long

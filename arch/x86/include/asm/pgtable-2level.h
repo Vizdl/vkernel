@@ -12,9 +12,9 @@
 // 每个 pte 表最多有 1024(2^10) 个项 
 #define PTRS_PER_PTE	1024
 
-extern inline int pgd_none(pgd_t pgd)		{ return 0; }
-extern inline int pgd_bad(pgd_t pgd)		{ return 0; }
-extern inline int pgd_present(pgd_t pgd)	{ return 1; }
+#define pgd_none(pgd)		(0)
+#define pgd_bad(pgd)		(0)
+#define pgd_present(pgd)	(1)
 #define pgd_clear(xp)				do { } while (0)
 
 /**
@@ -37,14 +37,11 @@ extern inline int pgd_present(pgd_t pgd)	{ return 1; }
 
 /**
  * @brief	通过 页全局目录表项 和 虚拟地址 找到 虚拟地址所对应的页中间目录表项(虚拟地址)
- * @param	页全局目录表项
- * @param	虚拟地址
+ * @param	pgd_t* 页全局目录表项
+ * @param	unsigned long 虚拟地址
  * @return	虚拟地址所对应的页中间目录表项
  */
-extern inline pmd_t * pmd_offset(pgd_t * dir, unsigned long address)
-{
-	return (pmd_t *) dir;
-}
+#define pmd_offset(dir, address) ((pmd_t *)dir)
 
 #define ptep_get_and_clear(xp)	__pte(xchg(&(xp)->pte_low, 0))
 #define pte_same(a, b)		((a).pte_low == (b).pte_low)

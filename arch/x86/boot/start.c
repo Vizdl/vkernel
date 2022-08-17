@@ -3,12 +3,15 @@
 #include <vkernel/types.h>
 #include <asm/gdt.h>
 #include <asm/page.h>
+#include <asm/pgtable.h>
 #include <asm/multiboot_parse.h>
 
 int is_boot_time __initdata = 1;
 extern void start_kernel(void);
 
-__init void gdt_create(void)
+pte_t pg0[PTRS_PER_PTE];
+
+__init void sectioning_init(void)
 {
 	uint64_t gdtr;
     gdt_table[0] = make_gdt_desc((uint32_t*)0, 0, 0, 0);
@@ -27,12 +30,31 @@ __init void gdt_create(void)
     flush_gs(SELECTOR_K_GS);
 }
 
-void __init test_multiboot (void)
+__init void boot_paging_init(void)
 {
-	// 测试 cr0 的值
-    uint32_t cr0;
+	pmd_t * pmd;
+    unsigned long cr0;
+	int i;
+	printk("boot_paging_init ...\n");
+	// 初始化 swapper_pg_dir
+	for (i = 0; i < PTRS_PER_PGD; i++) {
+		set_pgd(&swapper_pg_dir[i], __pgd(0));
+	}
+	// 初始化页表,物理地址设为 0x00000000 - 0x00400000
+	for (i = 0; i < PTRS_PER_PTE; i++) {
+		pg0[i] = mk_pte_phys((unsigned long)i * PAGE_SIZE, PAGE_KERNEL);
+	}
+	// 0x00000000 - 0x00400000 虚拟地址
+	pmd = (pmd_t *)&swapper_pg_dir[0];
+	set_pmd(pmd, __pmd(_PAGE_TABLE + (unsigned long)pg0));
+	// 0xc0000000 - 0xc0400000 虚拟地址
+	pmd = (pmd_t *)&swapper_pg_dir[768];
+	set_pmd(pmd, __pmd(_KERNPG_TABLE + (unsigned long)pg0));
+	load_cr3(swapper_pg_dir);
 	asm volatile ("mov %%cr0, %0" : "=r" (cr0));
-	printk("cr0 = %x\n", cr0);
+    cr0 |= 0x80000000;
+    asm volatile ("mov %0, %%cr0" : : "r" (cr0));
+    flush_cs(SELECTOR_K_CODE);
 }
 
 void __init cmain(unsigned long magic, unsigned long addr)
@@ -51,7 +73,7 @@ void __init cmain(unsigned long magic, unsigned long addr)
 		return;
 	}
     multiboot_save(addr);
-	gdt_create();
-	test_multiboot();
+	sectioning_init();
+	boot_paging_init();
 	start_kernel();
 }
