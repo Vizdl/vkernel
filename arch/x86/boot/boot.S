@@ -37,7 +37,7 @@
 
 #define GRUB_MULTIBOOT_ARCHITECTURE_I386 MULTIBOOT_ARCHITECTURE_I386
 
-	.section .text.init
+	.section .text.grub
 	.globl multiboot_start
 multiboot_start:
 	jmp multiboot_entry
