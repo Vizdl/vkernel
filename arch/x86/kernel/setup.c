@@ -8,6 +8,7 @@
 #include <asm/e820.h>
 #include <asm/multiboot_parse.h>
 
+// 这些都是虚拟地址
 extern char _text, _etext, _edata, _end;
 
 struct e820map e820;
@@ -97,11 +98,12 @@ void __init setup_memory_region(void)
 
 void __init setup_arch(void)
 {
-	unsigned long start_pfn, max_pfn, max_low_pfn;
 	int i;
+	unsigned long bootmap_size;
+	unsigned long start_pfn, max_pfn, max_low_pfn;
     printk("setup arch...\n");
 	setup_memory_region();
-    start_pfn = PFN_UP((unsigned long)&_end);
+    start_pfn = PFN_UP((unsigned long)__pa(&_end));
     /*
 	 * Find the highest page frame number we have available
 	 */
@@ -127,6 +129,61 @@ void __init setup_arch(void)
 		max_low_pfn = MAXMEM_PFN;
 	}
     printk("start_pfn is %u, max_pfn is %u, max_low_pfn is %u\n", start_pfn, max_pfn, max_low_pfn);
+
+	/*
+	 * Initialize the boot-time allocator (with low memory only):
+	 */
+	bootmap_size = init_bootmem(start_pfn, max_low_pfn);
+
+	/*
+	 * Register fully available low RAM pages with the bootmem allocator.
+	 */
+	for (i = 0; i < e820.nr_map; i++) {
+		unsigned long curr_pfn, last_pfn, size;
+ 		/*
+		 * Reserve usable low memory
+		 */
+		if (e820.map[i].type != E820_RAM)
+			continue;
+		/*
+		 * We are rounding up the start address of usable memory:
+		 */
+		curr_pfn = PFN_UP(e820.map[i].addr);
+		if (curr_pfn >= max_low_pfn)
+			continue;
+		/*
+		 * ... and at the end of the usable range downwards:
+		 */
+		last_pfn = PFN_DOWN(e820.map[i].addr + e820.map[i].size);
+
+		if (last_pfn > max_low_pfn)
+			last_pfn = max_low_pfn;
+
+		/*
+		 * .. finally, did all the rounding and playing
+		 * around just make the area go away?
+		 */
+		if (last_pfn <= curr_pfn)
+			continue;
+
+		size = last_pfn - curr_pfn;
+		free_bootmem(PFN_PHYS(curr_pfn), PFN_PHYS(size));
+	}
+	/*
+	 * Reserve the bootmem bitmap itself as well. We do this in two
+	 * steps (first step was init_bootmem()) because this catches
+	 * the (very unlikely) case of us accidentally initializing the
+	 * bootmem allocator with an invalid RAM area.
+	 */
+	reserve_bootmem(HIGH_MEMORY, (PFN_PHYS(start_pfn) +
+			 bootmap_size + PAGE_SIZE-1) - (HIGH_MEMORY));
+
+	/*
+	 * reserve physical page 0 - it's a special BIOS page on many boxes,
+	 * enabling clean reboots, SMP operation, laptop functions.
+	 */
+	reserve_bootmem(0, PAGE_SIZE);
+
     paging_init();
     return;
 }
