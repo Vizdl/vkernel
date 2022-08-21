@@ -3,6 +3,7 @@
 #include <vkernel/types.h>
 #include <asm/gdt.h>
 #include <asm/page.h>
+#include <asm/system.h>
 #include <asm/pgtable.h>
 #include <asm/multiboot_parse.h>
 
@@ -36,7 +37,6 @@ void __init boot_paging_init(void)
 	pgd_t * pgd;
 	pmd_t * pmd;
 	pte_t * pte;
-    unsigned long cr0;
 	int i;
 	// 获得 swapper_pg_dir 的物理地址
 	pgd = (pgd_t*)__pa(swapper_pg_dir);
@@ -58,9 +58,7 @@ void __init boot_paging_init(void)
 	set_pmd(pmd, __pmd(_KERNPG_TABLE + __pa(pg0)));
 	// 加载 cr3, 开启分页模式, 刷新 cs 寄存器
 	load_cr3(__pa(swapper_pg_dir));
-	asm volatile ("mov %%cr0, %0" : "=r" (cr0));
-    cr0 |= 0x80000000;
-    asm volatile ("mov %0, %%cr0" : : "r" (cr0));
+	paging();
     flush_cs(SELECTOR_K_CODE);
 }
 

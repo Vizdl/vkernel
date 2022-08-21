@@ -5,14 +5,6 @@
 #include <asm/bitops.h>
 #endif
 
-/**
- * @brief 加载物理地址 pgdir 进入 cr3 寄存器
- * @param pgdir 物理地址
- * @return 
- */
-#define load_cr3(pgdir) \
-	asm volatile("movl %0,%%cr3": :"r" (pgdir));
-
 /* Caches aren't brain-dead on the intel. */
 #define flush_cache_all()					do { } while (0)
 #define flush_cache_mm(mm)					do { } while (0)

@@ -3,6 +3,7 @@
 #include <vkernel/kernel.h>
 #include <vkernel/bootmem.h>
 #include <asm/page.h>
+#include <asm/system.h>
 #include <asm/pgtable.h>
 
 pgd_t swapper_pg_dir[PTRS_PER_PGD] __page_aligned;
