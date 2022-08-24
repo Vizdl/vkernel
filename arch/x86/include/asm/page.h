@@ -75,5 +75,8 @@ typedef struct { unsigned long pgprot; } pgprot_t;
  */
 #define __va(x)			((void *)((unsigned long)(x)+PAGE_OFFSET))
 
+#define virt_to_page(kaddr)	(mem_map + (__pa(kaddr) >> PAGE_SHIFT))
+#define VALID_PAGE(page)	((page - mem_map) < max_mapnr)
+
 #endif /* __ASSEMBLY__ */
 #endif /* _I386_PAGE_H */

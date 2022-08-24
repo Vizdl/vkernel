@@ -5,7 +5,10 @@
 
 #include <asm/atomic.h>
 #include <vkernel/kernel.h>
+#include <asm/bitops.h>
 #include <vkernel/list.h>
+
+extern unsigned long max_mapnr;
 
 typedef struct page {
 	struct list_head list;
@@ -20,6 +23,7 @@ typedef struct page {
 	struct zone_struct *zone;
 } mem_map_t;
 
+#define put_page_testzero(p) 	atomic_dec_and_test(&(p)->count)
 #define page_count(p)		atomic_read(&(p)->count)
 #define set_page_count(p,v) 	atomic_set(&(p)->count, v)
 
@@ -92,6 +96,12 @@ typedef struct page {
 #define ClearPageReserved(page)		clear_bit(PG_reserved, &(page)->flags)
 
 extern mem_map_t * mem_map;
+
+
+extern void FASTCALL(__free_pages(struct page *page, unsigned long order));
+extern void FASTCALL(free_pages(unsigned long addr, unsigned long order));
+#define __free_page(page) __free_pages((page), 0)
+#define free_page(addr) free_pages((addr),0)
 
 #endif /* __KERNEL__ */
 

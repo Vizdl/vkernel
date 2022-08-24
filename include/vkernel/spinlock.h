@@ -2,6 +2,7 @@
 #define __LINUX_SPINLOCK_H
 
 #include <vkernel/config.h>
+#include <asm/system.h>
 
 /*
  * These are the generic versions of the spinlocks and read-write

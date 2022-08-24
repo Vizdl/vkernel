@@ -15,4 +15,6 @@ extern void print_str(char *str);
 #define va_arg(ap, t) *((t*)(ap += 4))
 #define va_end(ap) ap = NULL
 
-#endif
+#define FASTCALL(x)	x 
+
+#endif /* __KERNEL_H */
