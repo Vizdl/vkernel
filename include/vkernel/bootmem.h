@@ -98,4 +98,8 @@ extern void __init free_bootmem (unsigned long addr, unsigned long size);
 #define alloc_bootmem_low_pages(x) \
 	__alloc_bootmem((x), PAGE_SIZE, 0)
 
+unsigned long free_all_bootmem_node (pg_data_t *pgdat);
+
+unsigned long free_all_bootmem (void);
+
 #endif // _LINUX_BOOTMEM_H
