@@ -111,6 +111,93 @@ static void __free_pages_ok (struct page *page, unsigned long order)
 		memory_pressure--;
 }
 
+#define MARK_USED(index, order, area) \
+	change_bit((index) >> (1+(order)), (area)->map)
+
+/**
+ * @brief 拆分 page 数组,并将拆分下来的放到 area->free_list 上。
+ * 
+ * @param zone 申请到的 page 的 zone
+ * @param page 申请到的 page 数组(长度为 high) 的第一个
+ * @param index page 相对 zone->offset 的偏移量
+ * @param low 需要的 page 的 order
+ * @param high 当前 page 的 order
+ * @param area page 的 area
+ * @return 申请的第一个 page
+ */
+static inline struct page * expand (zone_t *zone, struct page *page,
+	 unsigned long index, int low, int high, free_area_t * area)
+{
+	unsigned long size = 1 << high;
+	// 不断拆分,直到 high 等于 low
+	while (high > low) {
+		if (BAD_RANGE(zone,page))
+			BUG();
+		area--;
+		high--;
+		size >>= 1;
+		// 将拆分下来的放到 area->free_list 上
+		memlist_add_head(&(page)->list, &(area)->free_list);
+		MARK_USED(index, high, area);
+		index += size;
+		// 两半取后面一半
+		page += size;
+	}
+	if (BAD_RANGE(zone,page))
+		BUG();
+	return page;
+}
+
+/**
+ * @brief 在 zone 申请 2^order 个 struct page(物理页)
+ * 
+ * @param zone 需要申请的区域
+ * @param order 申请 2^order 个 struct page(物理页)
+ * @return 申请的第一个 page
+ */
+static FASTCALL(struct page * rmqueue(zone_t *zone, unsigned long order));
+static struct page * rmqueue(zone_t *zone, unsigned long order)
+{
+	free_area_t * area = zone->free_area + order;
+	unsigned long curr_order = order;
+	struct list_head *head, *curr;
+	unsigned long flags;
+	struct page *page;
+
+	spin_lock_irqsave(&zone->lock, flags);
+	// order -> MAX_ORDER - 1,寻找有空闲列表的一项。
+	do {
+		head = &area->free_list;
+		curr = memlist_next(head);
+		// 当前 free_list 不为空
+		if (curr != head) {
+			unsigned int index;
+
+			page = memlist_entry(curr, struct page, list);
+			if (BAD_RANGE(zone,page))
+				BUG();
+			memlist_del(curr);
+			index = (page - mem_map) - zone->offset;
+			MARK_USED(index, curr_order, area);
+			zone->free_pages -= 1 << order;
+
+			page = expand(zone, page, index, order, curr_order, area);
+			spin_unlock_irqrestore(&zone->lock, flags);
+
+			set_page_count(page, 1);
+			if (BAD_RANGE(zone,page))
+				BUG();
+			//DEBUG_ADD_PAGE
+			return page;	
+		}
+		curr_order++;
+		area++;
+	} while (curr_order < MAX_ORDER);
+	spin_unlock_irqrestore(&zone->lock, flags);
+
+	return NULL;
+}
+
 void __free_pages(struct page *page, unsigned long order)
 {
 	if (!PageReserved(page) && put_page_testzero(page))

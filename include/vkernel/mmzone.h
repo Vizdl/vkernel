@@ -11,15 +11,15 @@
 #define MAX_ORDER 10
 
 typedef struct free_area_struct {
-	struct list_head	free_list;
-	unsigned int		*map;
+	struct list_head	free_list;	// 空闲的 strust page 列表
+	unsigned int		*map;		// 记录是否被申请的结构
 } free_area_t;
 
 struct pglist_data;
 
 typedef struct zone_struct {
 	spinlock_t		lock;
-	unsigned long		offset;
+	unsigned long		offset;				// 在 mem_map 的偏移量
 	unsigned long		free_pages;
 	unsigned long		inactive_clean_pages;
 	unsigned long		inactive_dirty_pages;
