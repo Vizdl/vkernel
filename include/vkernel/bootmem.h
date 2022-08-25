@@ -3,7 +3,14 @@
 
 #include <vkernel/init.h>
 #include <vkernel/mmzone.h>
+#include <asm/dma.h>
+#include <vkernel/cache.h>
 
+/**
+ * bootmem 管理的是 DMA 区内可用地址,
+ * max_low_pfn 是管理的最低帧
+ * min_low_pfn 是管理的最高帧(也是最高的DMA地址)
+ */
 extern unsigned long max_low_pfn;
 extern unsigned long min_low_pfn;
 
@@ -82,13 +89,35 @@ extern void * __init __alloc_bootmem (unsigned long size, unsigned long align, u
 extern void * __init __alloc_bootmem_node (pg_data_t *pgdat, unsigned long size, unsigned long align, unsigned long goal);
 
 /**
- * @brief 向指定 bootmem_data_t 释放起始物理地址为 addr 大小为 size byte 的内存块
+ * @brief 向 contig_page_data 释放起始物理地址为 addr 大小为 size byte 的内存块
  * 
  * @param bdata 
  * @param addr 物理地址
  * @param size 释放的大小,单位为 byte
  */
 extern void __init free_bootmem (unsigned long addr, unsigned long size);
+
+/**
+ * @brief 向指定 pgdat 内,申请起始物理地址为 __pa(MAX_DMA_ADDRESS),
+ * 对齐为 SMP_CACHE_BYTES,大小为 x 的物理地址并计算出其虚拟地址
+ * 
+ * @param pgdat
+ * @param x 需要申请的内存大小(单位 byte)
+ * @return void* 虚拟地址
+ */
+#define alloc_bootmem_node(pgdat, x) \
+	__alloc_bootmem_node((pgdat), (x), SMP_CACHE_BYTES, __pa(MAX_DMA_ADDRESS))
+
+/**
+ * @brief 向指定 pgdat 内,申请起始物理地址为 __pa(MAX_DMA_ADDRESS),
+ * 对齐为 PAGE_SIZE,大小为 x 的物理地址并计算出其虚拟地址
+ * 
+ * @param pgdat
+ * @param x 需要申请的内存大小(单位 byte)
+ * @return void* 虚拟地址
+ */
+#define alloc_bootmem_pages_node(pgdat, x) \
+	__alloc_bootmem_node((pgdat), (x), PAGE_SIZE, __pa(MAX_DMA_ADDRESS))
 
 /**
  * @brief 从物理地址 0 寻找页面对齐大小为 x byte 的物理页

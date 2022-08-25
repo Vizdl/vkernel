@@ -103,6 +103,14 @@ extern void FASTCALL(free_pages(unsigned long addr, unsigned long order));
 #define __free_page(page) __free_pages((page), 0)
 #define free_page(addr) free_pages((addr),0)
 
+/*
+ * GFP bitmasks..
+ */
+#define __GFP_WAIT	0x01
+#define __GFP_HIGH	0x02
+#define __GFP_IO	0x04
+#define __GFP_DMA	0x08
+
 #endif /* __KERNEL__ */
 
 #endif /* _LINUX_MM_H */

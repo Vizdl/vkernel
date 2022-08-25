@@ -66,6 +66,9 @@ typedef struct pglist_data {
 extern pg_data_t *pgdat_list;
 extern pg_data_t contig_page_data;
 
+#define MAP_ALIGN(x)	((((x) % sizeof(mem_map_t)) == 0) ? (x) : ((x) + \
+		sizeof(mem_map_t) - ((x) % sizeof(mem_map_t))))
+
 #endif /* !__ASSEMBLY__ */
 #endif /* __KERNEL__ */
 #endif /* _LINUX_MMZONE_H */
