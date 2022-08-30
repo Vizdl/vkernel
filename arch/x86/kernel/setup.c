@@ -6,6 +6,8 @@
 #include <vkernel/debug.h>
 #include <asm/page.h>
 #include <asm/e820.h>
+#include <asm/gdt.h>
+#include <asm/processor.h>
 #include <asm/multiboot_parse.h>
 
 // 这些都是虚拟地址
@@ -186,4 +188,16 @@ void __init setup_arch(void)
 
     paging_init();
     return;
+}
+
+void __init cpu_init (void)
+{
+	uint64_t gdtr;
+	uint32_t tss_size;
+    tss_size = sizeof(init_tss[0]);
+    /* 在gdt中添加dpl为0的TSS描述符 */
+    gdt_table[6] = make_gdt_desc((uint32_t*)&init_tss[0], tss_size - 1, TSS_ATTR_LOW, TSS_ATTR_HIGH);
+    gdtr = ((sizeof(gdt_table) - 1) | ((uint64_t)(gdt_table) << 16));
+	load_gdtr(gdtr);
+	load_tss(SELECTOR_TSS);
 }

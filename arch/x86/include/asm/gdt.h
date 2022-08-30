@@ -91,7 +91,9 @@ struct gdt_desc {
 // gdt 描述符表
 extern struct gdt_desc gdt_table[GDT_TABLE_SIZE];
 
-#define load_gdtr( gdtr ) asm volatile ("lgdt %0" : : "m" (gdtr));
+#define load_gdtr( gdtr ) asm volatile ("lgdt %0" : : "m" (gdtr))
+#define load_tss( tss ) asm volatile ("ltr %w0" : : "r" (tss))
+
 // 通过跳转刷新 cs 寄存器
 #define flush_cs( cs ) asm volatile ( "ljmp %0, $fake_label%1\n\t fake_label%1: \n\t" :: "i"(cs), "i"(__LINE__))
 #define flush_ds( ds ) asm volatile ("mov %0, %%ax;mov %%ax, %%ds" : : "i" (ds));

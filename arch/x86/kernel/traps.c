@@ -6,6 +6,7 @@
 #include <vkernel/linkage.h>
 
 struct desc_struct idt_table[256] __attribute__((__section__(".data.idt"))) = { {0, 0}, };
+extern void cpu_init (void);
 
 #define _set_gate(gate_addr,type,dpl,addr) \
 do { \
@@ -191,5 +192,7 @@ void __init trap_init(void){
 	set_trap_gate(19,&simd_coprocessor_error);
 
 	set_system_gate(SYSCALL_VECTOR,&system_call);
+
+    cpu_init();
     return;
 }
