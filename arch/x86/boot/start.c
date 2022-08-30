@@ -1,7 +1,7 @@
 #include <vkernel/kernel.h>
 #include <vkernel/init.h>
 #include <vkernel/types.h>
-#include <asm/gdt.h>
+#include <asm/desc.h>
 #include <asm/page.h>
 #include <asm/system.h>
 #include <asm/pgtable.h>

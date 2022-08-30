@@ -7,6 +7,7 @@
 #include <asm/page.h>
 #include <asm/e820.h>
 #include <asm/multiboot_parse.h>
+#include <asm/desc.h>
 
 // 这些都是虚拟地址
 extern char _text, _etext, _edata, _end;
@@ -186,4 +187,13 @@ void __init setup_arch(void)
 
     paging_init();
     return;
+}
+
+void __init cpu_init (void)
+{    
+	uint64_t gdtr, idtr;
+	gdtr = ((sizeof(gdt_table) - 1) | ((uint64_t)(gdt_table) << 16));
+	idtr = ((sizeof(idt_table) - 1) | ((uint64_t)(idt_table) << 16));
+    load_gdtr(gdtr);
+	load_idtr(idtr);
 }

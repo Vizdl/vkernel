@@ -12,6 +12,15 @@
  */
 #define load_cr3(pgdir) asm volatile("movl %0,%%cr3": :"r" (pgdir))
 
+#define load_gdtr( gdtr ) asm volatile ("lgdt %0" : : "m" (gdtr))
+#define load_idtr( idtr ) asm volatile ("lidt %0" : : "m" (idtr))
+
+// 通过跳转刷新 cs 寄存器
+#define flush_cs( cs ) asm volatile ( "ljmp %0, $fake_label%1\n\t fake_label%1: \n\t" :: "i"(cs), "i"(__LINE__))
+#define flush_ds( ds ) asm volatile ("mov %0, %%ax;mov %%ax, %%ds" : : "i" (ds))
+#define flush_ss( ss ) asm volatile ("mov %0, %%ax;mov %%ax, %%ss" : : "i" (ss))
+#define flush_gs( gs ) asm volatile ("mov %0, %%ax;mov %%ax, %%gs" : : "i" (gs))
+
 #define read_cr0() ({ \
 	unsigned int __dummy; \
 	__asm__( \

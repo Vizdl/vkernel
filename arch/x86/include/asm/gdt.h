@@ -6,6 +6,9 @@
 #ifndef _LINUX_TYPES_H
 #include <vkernel/types.h>
 #endif
+
+#include <asm/segment.h>
+
 // ----------------  GDT描述符属性  ----------------
 
 #define	DESC_G_4K    1
@@ -27,15 +30,6 @@
 #define DESC_TYPE_CODE	8	// x=1,c=0,r=0,a=0 代码段是可执行的,非依从的,不可读的,已访问位a清0.
 #define DESC_TYPE_DATA  2	// x=0,e=0,w=1,a=0 数据段是不可执行的,向上扩展的,可写的,已访问位a清0.
 #define DESC_TYPE_TSS   9	// B位为0,不忙
-
-
-#define	 RPL0  0
-#define	 RPL1  1
-#define	 RPL2  2
-#define	 RPL3  3
-
-#define TI_GDT 0
-#define TI_LDT 1
 
 #define SELECTOR_K_CODE	   ((1 << 3) + (TI_GDT << 2) + RPL0)
 #define SELECTOR_K_DATA	   ((2 << 3) + (TI_GDT << 2) + RPL0)
@@ -79,24 +73,9 @@ struct gdt_desc {
     uint8_t  base_high_byte;
 };
 
-#define EFLAGS_MBS	(1 << 1)	// 此项必须要设置
-#define EFLAGS_IF_1	(1 << 9)	// if为1,开中断
-#define EFLAGS_IF_0	0		// if为0,关中断
-#define EFLAGS_IOPL_3	(3 << 12)	// IOPL3,用于测试用户程序在非系统调用下进行IO
-#define EFLAGS_IOPL_0	(0 << 12)	// IOPL0
-
 // GDT描述符表大小
 #define GDT_TABLE_SIZE 7
 
-// gdt 描述符表
-extern struct gdt_desc gdt_table[GDT_TABLE_SIZE];
-
-#define load_gdtr( gdtr ) asm volatile ("lgdt %0" : : "m" (gdtr));
-// 通过跳转刷新 cs 寄存器
-#define flush_cs( cs ) asm volatile ( "ljmp %0, $fake_label%1\n\t fake_label%1: \n\t" :: "i"(cs), "i"(__LINE__))
-#define flush_ds( ds ) asm volatile ("mov %0, %%ax;mov %%ax, %%ds" : : "i" (ds));
-#define flush_ss( ss ) asm volatile ("mov %0, %%ax;mov %%ax, %%ss" : : "i" (ss));
-#define flush_gs( gs ) asm volatile ("mov %0, %%ax;mov %%ax, %%gs" : : "i" (gs));
 
 // 创建 gdt 描述符
 extern struct gdt_desc make_gdt_desc(uint32_t* desc_addr, uint32_t limit, uint8_t attr_low, uint8_t attr_high);
