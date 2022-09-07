@@ -7,6 +7,14 @@
 
 struct desc_struct idt_table[256] __attribute__((__section__(".data.idt"))) = { {0, 0}, };
 
+/**
+ * @brief 设置门描述符
+ * 
+ * @param gate_addr 门描述符地址
+ * @param type 门类型
+ * @param dpl 门 dpl
+ * @param addr 门处理函数地址
+ */
 #define _set_gate(gate_addr,type,dpl,addr) \
 do { \
   int __d0, __d1; \
@@ -31,17 +39,35 @@ __asm__ __volatile__ ("movw %w3,0(%2)\n\t" \
 	"movb %%ah,7(%2)\n\t" \
 	"rorl $16,%%eax" \
 	: "=m"(*(n)) : "a" (addr), "r"(n), "ir"(limit), "i"(type))
-
+	
+/**
+ * @brief 设置中断门描述符(外设中断)
+ * 
+ * @param n idt表下标
+ * @param addr 回调函数指针
+ */
 void set_intr_gate(unsigned int n, void *addr)
 {
 	_set_gate(idt_table+n,14,0,addr);
 }
 
+/**
+ * @brief 设置陷阱门描述符(DPL=0)
+ * 
+ * @param n idt表下标
+ * @param addr 回调函数指针
+ */
 static void __init set_trap_gate(unsigned int n, void *addr)
 {
 	_set_gate(idt_table+n,15,0,addr);
 }
 
+/**
+ * @brief 设置陷阱门描述符(DPL=3)
+ * 
+ * @param n 
+ * @param addr 
+ */
 static void __init set_system_gate(unsigned int n, void *addr)
 {
 	_set_gate(idt_table+n,15,3,addr);
@@ -52,11 +78,24 @@ static void __init set_call_gate(void *a, void *addr)
 	_set_gate(a,12,3,addr);
 }
 
+/**
+ * @brief 在 GDT 上设置一个 TSS 描述符
+ * 
+ * @param n GDT index
+ * @param addr 线性基地址
+ */
 void set_tss_desc(unsigned int n, void *addr)
 {
 	_set_tssldt_desc(gdt_table+__TSS(n), (int)addr, 235, 0x89);
 }
 
+/**
+ * @brief 在 GDT 上设置一个 LDT 描述符
+ * 
+ * @param n GDT index
+ * @param addr 线性基地址
+ * @param size 段大小
+ */
 void set_ldt_desc(unsigned int n, void *addr, unsigned int size)
 {
 	_set_tssldt_desc(gdt_table+__LDT(n), (int)addr, ((size << 3)-1), 0x82);
@@ -167,6 +206,10 @@ asmlinkage void machine_check(void)
     printk("machine_check ...\n");
 }
 
+/**
+ * @brief 初始化系统默认的 idt
+ * 
+ */
 void __init trap_init(void){
     printk("trap init ...\n");
 	set_trap_gate(0,&divide_error);

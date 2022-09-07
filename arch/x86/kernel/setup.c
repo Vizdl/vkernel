@@ -7,11 +7,13 @@
 #include <asm/page.h>
 #include <asm/e820.h>
 #include <asm/multiboot_parse.h>
+#include <asm/processor.h>
 
 // 这些都是虚拟地址
 extern char _text, _etext, _edata, _end;
 
 struct e820map e820;
+struct cpuinfo_x86 boot_cpu_data = { 0, 0, 0, 0, -1, 1, 0, 0, -1 };
 
 extern void paging_init(void);
 
