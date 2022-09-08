@@ -37,7 +37,7 @@
 
 #else /* !SMP */
 
-#define DEBUG_SPINLOCKS	0	/* 0 == no debugging, 1 == maintain lock state, 2 == full debug */
+#define DEBUG_SPINLOCKS	1	/* 0 == no debugging, 1 == maintain lock state, 2 == full debug */
 
 #if (DEBUG_SPINLOCKS < 1)
 
