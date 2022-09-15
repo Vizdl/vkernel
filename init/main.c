@@ -13,7 +13,7 @@ asmlinkage void __init start_kernel(void)
     trap_init();
     init_IRQ();
     // for test irq
-    __asm__ __volatile__ ("int $1");
+    __asm__ __volatile__ ("int $32");
     printk("end kernel...\n");
     return;
 }
