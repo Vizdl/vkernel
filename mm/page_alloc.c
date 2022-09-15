@@ -13,9 +13,6 @@
 pg_data_t *pgdat_list;
 
 static char *zone_names[MAX_NR_ZONES] = { "DMA", "Normal", "HighMem" };
-static int zone_balance_ratio[MAX_NR_ZONES] = { 32, 128, 128, };
-static int zone_balance_min[MAX_NR_ZONES] = { 10 , 10, 10, };
-static int zone_balance_max[MAX_NR_ZONES] = { 255 , 255, 255, };
 
 #define memlist_init(x) INIT_LIST_HEAD(x)
 #define memlist_add_head list_add
@@ -32,6 +29,12 @@ static int zone_balance_max[MAX_NR_ZONES] = { 255 , 255, 255, };
 
 static void FASTCALL(__free_pages_ok (struct page *page, unsigned long order));
 
+/**
+ * @brief 释放 2^order 大小的物理页
+ * 
+ * @param page 要释放的第一个物理页
+ * @param order 2^order
+ */
 static void __free_pages_ok (struct page *page, unsigned long order)
 {
 	unsigned long index, page_idx, mask, flags;
@@ -58,14 +61,16 @@ static void __free_pages_ok (struct page *page, unsigned long order)
 	page->age = PAGE_AGE_START;
 	
 	zone = page->zone;
-
+	// 0bffff fff0
 	mask = (~0UL) << order;
+	// 找到 zone 第一个物理页
 	base = mem_map + zone->offset;
+	// 计算 page 相对于 zone 第一个物理页 的偏移量
 	page_idx = page - base;
 	if (page_idx & ~mask)
 		BUG();
 	index = page_idx >> (1 + order);
-
+	// 根据阶数找到对应的 free_area
 	area = zone->free_area + order;
 
 	spin_lock_irqsave(&zone->lock, flags);
@@ -77,27 +82,29 @@ static void __free_pages_ok (struct page *page, unsigned long order)
 
 		if (area >= zone->free_area + MAX_ORDER)
 			BUG();
+		// 判断是否能合成,如若不能则 break
 		if (!test_and_change_bit(index, area->map))
 			/*
 			 * the buddy page is still allocated.
 			 */
 			break;
-		/*
-		 * Move the buddy up one level.
-		 */
+
+		// buddy
 		buddy1 = base + (page_idx ^ -mask);
+		// 当前要释放的物理页
 		buddy2 = base + page_idx;
 		if (BAD_RANGE(zone,buddy1))
 			BUG();
 		if (BAD_RANGE(zone,buddy2))
 			BUG();
-
+		// 将 buddy 释放了
 		memlist_del(&buddy1->list);
 		mask <<= 1;
 		area++;
 		index >>= 1;
 		page_idx &= mask;
 	}
+	// 添加合成后的物理页到 free_list
 	memlist_add_head(&(base + page_idx)->list, &area->free_list);
 
 	spin_unlock_irqrestore(&zone->lock, flags);
@@ -129,7 +136,7 @@ static inline struct page * expand (zone_t *zone, struct page *page,
 	 unsigned long index, int low, int high, free_area_t * area)
 {
 	unsigned long size = 1 << high;
-	// 不断拆分,直到 high 等于 low
+	// 不断拆分,直到当前 page 大小(high)等于 low
 	while (high > low) {
 		if (BAD_RANGE(zone,page))
 			BUG();
@@ -213,6 +220,37 @@ void free_pages(unsigned long addr, unsigned long order)
 		__free_pages(fpage, order);
 }
 
+/**
+ * @brief 向 zonelist 里的 zone 依次申请 2^order 个物理页
+ * 
+ * @param zonelist 
+ * @param order 
+ * @return struct page* 
+ */
+struct page * __alloc_pages(zonelist_t *zonelist, unsigned long order)
+{
+	zone_t **zone;
+	struct page * page;
+
+	// 首先，看看是否有任何具有大量空闲内存的区域。我们首先分配空闲内存，因为它不包含任何数据…废话！
+	zone = zonelist->zones;
+	// 遍历所有区域,查看是否能申请到内存
+	for (;;) {
+		zone_t *z = *(zone++);
+		if (!z)
+			break;
+		if (!z->size)
+			BUG();
+		page = rmqueue(z, order);
+		if (page)
+			return page;
+	}
+
+	/* No luck.. */
+	printk("error : __alloc_pages: %lu-order allocation failed.\n", order);
+	return NULL;
+}
+
 /*
  * Builds allocation fallback zone lists.
  */
@@ -251,6 +289,17 @@ static inline void build_zonelists(pg_data_t *pgdat)
 
 #define LONG_ALIGN(x) (((x)+(sizeof(long))-1)&~((sizeof(long))-1))
 
+/**
+ * @brief 初始化 buddy
+ * 
+ * @param nid cpu id?
+ * @param pgdat 
+ * @param gmap 全局物理页数组
+ * @param zones_size 每个zone的物理页个数
+ * @param zone_start_paddr 第一个 zone 开始地址
+ * @param zholes_size 每个zone的空洞物理页个数
+ * @param lmem_map 
+ */
 void __init free_area_init_core(int nid, pg_data_t *pgdat, struct page **gmap,
 	unsigned long *zones_size, unsigned long zone_start_paddr, 
 	unsigned long *zholes_size, struct page *lmem_map)
@@ -286,21 +335,21 @@ void __init free_area_init_core(int nid, pg_data_t *pgdat, struct page **gmap,
 	pgdat->node_start_paddr = zone_start_paddr;
 	pgdat->node_start_mapnr = (lmem_map - mem_map);
 
-	/*
-	 * 最初，所有页面都是保留的,一旦早期引导过程完成，free_all_bootmem() 就会释放空闲页面。
-	 */
+	// 最初，所有页面都是保留的,一旦早期引导过程完成，free_all_bootmem() 就会释放空闲页面。
+	// 遍历所有 struct page
 	for (p = lmem_map; p < lmem_map + totalpages; p++) {
 		set_page_count(p, 0);
 		SetPageReserved(p);
 		memlist_init(&p->list);
 	}
-
+	// zone 的偏移量
 	offset = lmem_map - mem_map;	
+	// 遍历初始化 zone
 	for (j = 0; j < MAX_NR_ZONES; j++) {
 		zone_t *zone = pgdat->node_zones + j;
 		unsigned long mask;
 		unsigned long size, realsize;
-
+		// 计算 zone 真实大小
 		realsize = size = zones_size[j];
 		if (zholes_size)
 			realsize -= zholes_size[j];
@@ -311,36 +360,12 @@ void __init free_area_init_core(int nid, pg_data_t *pgdat, struct page **gmap,
 		zone->lock = SPIN_LOCK_UNLOCKED;
 		zone->zone_pgdat = pgdat;
 		zone->free_pages = 0;
-		zone->inactive_clean_pages = 0;
-		zone->inactive_dirty_pages = 0;
-		memlist_init(&zone->inactive_clean_list);
 		if (!size)
 			continue;
 
 		zone->offset = offset;
 		cumulative += size;
-		mask = (realsize / zone_balance_ratio[j]);
-		if (mask < zone_balance_min[j])
-			mask = zone_balance_min[j];
-		else if (mask > zone_balance_max[j])
-			mask = zone_balance_max[j];
-		zone->pages_min = mask;
-		zone->pages_low = mask*2;
-		zone->pages_high = mask*3;
-		/*
-		 * Add these free targets to the global free target;
-		 * we have to be SURE that freepages.high is higher
-		 * than SUM [zone->pages_min] for all zones, otherwise
-		 * we may have bad bad problems.
-		 *
-		 * This means we cannot make the freepages array writable
-		 * in /proc, but have to add a separate extra_free_target
-		 * for people who require it to catch load spikes in eg.
-		 * gigabit ethernet routing...
-		 */
-		freepages.min += mask;
-		freepages.low += mask*2;
-		freepages.high += mask*3;
+
 		zone->zone_mem_map = mem_map + offset;
 		zone->zone_start_mapnr = offset;
 		zone->zone_start_paddr = zone_start_paddr;
@@ -348,21 +373,32 @@ void __init free_area_init_core(int nid, pg_data_t *pgdat, struct page **gmap,
 		for (i = 0; i < size; i++) {
 			struct page *page = mem_map + offset + i;
 			page->zone = zone;
-			page->virtual = __va(zone_start_paddr);
-			zone_start_paddr += PAGE_SIZE;
+			if (j != ZONE_HIGHMEM) {
+				page->virtual = __va(zone_start_paddr);
+				zone_start_paddr += PAGE_SIZE;
+			}
 		}
-
+		// size 表示的是物理页个数
 		offset += size;
 		mask = -1;
+		// 创建 free_area 数组
 		for (i = 0; i < MAX_ORDER; i++) {
 			unsigned long bitmap_size;
-
+			// 初始化 free area list
 			memlist_init(&zone->free_area[i].free_list);
 			mask += mask;
-			size = (size + ~mask) & mask;
-			bitmap_size = size >> i;
-			bitmap_size = (bitmap_size + 7) >> 3;
-			bitmap_size = LONG_ALIGN(bitmap_size);
+			size = (size + ~mask) & mask;	// 对齐?
+			// 计算 bitmap 的大小(针对不同阶有不同的大小), bitmap_size = zone_size(物理页总数) / 2^i
+			// 假设有 1024 个物理页
+			// 0 阶 free_area bitmap_size = 1024 bit
+			// 1 阶 free_area bitmap_size = 512 bit
+			// 2 阶 free_area bitmap_size = 256 bit
+			// 3 阶 free_area bitmap_size = 128 bit
+			// ...
+			// 但是 alloc_bootmem_node 仅能申请物理页大小为单位的内存,而不是 bit, 所以 4k byte 是最小单位
+			bitmap_size = size >> i;				// 一个bit能表示多少个物理页
+			bitmap_size = (bitmap_size + 7) >> 3;	// 2^3 = 8
+			bitmap_size = LONG_ALIGN(bitmap_size);	// 对齐
 			zone->free_area[i].map = 
 			  (unsigned int *) alloc_bootmem_node(pgdat, bitmap_size);
 		}
@@ -370,6 +406,11 @@ void __init free_area_init_core(int nid, pg_data_t *pgdat, struct page **gmap,
 	build_zonelists(pgdat);
 }
 
+/**
+ * @brief 通过释放 contig_page_data 内的 bootmem 来初始化 buddy
+ * 
+ * @param zones_size 每个 zones 物理页的数量
+ */
 void __init free_area_init(unsigned long *zones_size)
 {
 	free_area_init_core(0, &contig_page_data, &mem_map, zones_size, 0, 0, 0);

@@ -1,10 +1,13 @@
-#include <vkernel/init.h>
-#include <vkernel/debug.h>
-#include <vkernel/kernel.h>
-#include <vkernel/bootmem.h>
+#include <asm/io.h>
 #include <asm/page.h>
 #include <asm/system.h>
 #include <asm/pgtable.h>
+#include <vkernel/mm.h>
+#include <vkernel/init.h>
+#include <vkernel/debug.h>
+#include <vkernel/mmzone.h>
+#include <vkernel/kernel.h>
+#include <vkernel/bootmem.h>
 
 pgd_t swapper_pg_dir[PTRS_PER_PGD] __page_aligned;
 
@@ -66,5 +69,21 @@ void __init paging_init(void)
     pagetable_init();
     load_cr3(__pa(swapper_pg_dir));
     __flush_tlb();
+	// 计算每个 zone 的大小并且初始化 buddy 系统
+	{
+		unsigned long zones_size[MAX_NR_ZONES] = {0, 0, 0};
+		unsigned int max_dma, low;
+
+		max_dma = virt_to_phys((char *)MAX_DMA_ADDRESS) >> PAGE_SHIFT;
+		low = max_low_pfn;
+
+		if (low < max_dma)
+			zones_size[ZONE_DMA] = low;
+		else {
+			zones_size[ZONE_DMA] = max_dma;
+			zones_size[ZONE_NORMAL] = low - max_dma;
+		}
+		free_area_init(zones_size);
+	}
     return;
 }

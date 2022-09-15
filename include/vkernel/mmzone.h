@@ -18,19 +18,15 @@ typedef struct free_area_struct {
 struct pglist_data;
 
 typedef struct zone_struct {
-	spinlock_t		lock;
-	unsigned long		offset;				// 在 mem_map 的偏移量
-	unsigned long		free_pages;
-	unsigned long		inactive_clean_pages;
-	unsigned long		inactive_dirty_pages;
-	unsigned long		pages_min, pages_low, pages_high;
+	spinlock_t		lock;			// zone 锁
+	unsigned long		offset;		// 在 mem_map 的偏移量
+	unsigned long		free_pages; // 该 zone 的 free page 数量,单位是物理页
 
-	struct list_head	inactive_clean_list;
-	free_area_t		free_area[MAX_ORDER];
+	free_area_t		free_area[MAX_ORDER];		// buddy free area list's array
 
 	char			*name;
 	unsigned long		size;
-
+	
 	struct pglist_data	*zone_pgdat;
 	unsigned long		zone_start_paddr;
 	unsigned long		zone_start_mapnr;

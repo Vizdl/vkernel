@@ -111,6 +111,9 @@ extern void FASTCALL(free_pages(unsigned long addr, unsigned long order));
 #define __GFP_IO	0x04
 #define __GFP_DMA	0x08
 
+
+extern void free_area_init(unsigned long * zones_size);
+
 #endif /* __KERNEL__ */
 
 #endif /* _LINUX_MM_H */
