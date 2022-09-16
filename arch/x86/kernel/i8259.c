@@ -1,8 +1,7 @@
+#include <asm/desc.h>
+#include <vkernel/irq.h>
 #include <vkernel/init.h>
 #include <vkernel/kernel.h>
-#include <asm/irq.h>
-#include <asm/desc.h>
-#include <asm/hw_irq.h>
 
 // 定义 common_interrupt
 BUILD_COMMON_IRQ()
@@ -34,6 +33,7 @@ BUILD_16_IRQS(0x0)
 	IRQ(x,c), IRQ(x,d), IRQ(x,e), IRQ(x,f)
 
 
+// idt 回调函数列表
 void (*interrupt[NR_IRQS])(void) = {
 	IRQLIST_16(0x0),
 };
