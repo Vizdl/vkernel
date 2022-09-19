@@ -87,3 +87,7 @@ void __init paging_init(void)
 	}
     return;
 }
+
+void __init mem_init(void){
+    num_physpages = max_low_pfn;
+}

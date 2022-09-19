@@ -221,7 +221,7 @@ void __free_pages(struct page *page, unsigned long order)
 /**
  * @brief 释放 2^order 大小的物理页
  * 
- * @param addr 要释放的物理页地址
+ * @param addr 要释放的物理页的虚拟地址
  * @param order 2^order
  */
 void free_pages(unsigned long addr, unsigned long order)
@@ -264,6 +264,13 @@ struct page * __alloc_pages(zonelist_t *zonelist, unsigned long order)
 	return NULL;
 }
 
+/**
+ * @brief 向 contig_page_data 根据 gfp_mask 申请 2^order 个物理页
+ * 
+ * @param gfp_mask 申请码 
+ * @param order 2^order 个物理页
+ * @return struct page* 
+ */
 static inline struct page * alloc_pages(int gfp_mask, unsigned long order)
 {
 	/*
@@ -274,8 +281,12 @@ static inline struct page * alloc_pages(int gfp_mask, unsigned long order)
 	return __alloc_pages(contig_page_data.node_zonelists+(gfp_mask), order);
 }
 
-/*
- * Common helper functions.
+/**
+ * @brief 向 contig_page_data 根据 gfp_mask 申请 2^order 个物理页,并转换成虚拟地址
+ * 
+ * @param gfp_mask 申请码
+ * @param order 2^order 个物理页
+ * @return unsigned 虚拟地址
  */
 unsigned long __get_free_pages(int gfp_mask, unsigned long order)
 {

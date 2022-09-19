@@ -9,6 +9,7 @@
 #include <vkernel/list.h>
 
 extern unsigned long max_mapnr;
+extern unsigned long num_physpages;
 
 typedef struct page {
 	struct list_head list;
