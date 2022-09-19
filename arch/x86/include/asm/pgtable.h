@@ -119,6 +119,7 @@
 #define pmd_clear(xp)	do { set_pmd(xp, __pmd(0)); } while (0)
 #define	pmd_bad(x)	((pmd_val(x) & (~PAGE_MASK & ~_PAGE_USER)) != _KERNPG_TABLE)
 
+#define page_address(page) ((page)->virtual)
 
 // 判断 pte 是否 可读可/执行/已写/已读/可写
 static inline int pte_read(pte_t pte)		{ return (pte).pte_low & _PAGE_USER; }

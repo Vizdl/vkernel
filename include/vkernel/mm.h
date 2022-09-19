@@ -100,6 +100,8 @@ extern mem_map_t * mem_map;
 
 extern void FASTCALL(__free_pages(struct page *page, unsigned long order));
 extern void FASTCALL(free_pages(unsigned long addr, unsigned long order));
+extern unsigned long FASTCALL(__get_free_pages(int gfp_mask, unsigned long order));
+
 #define __free_page(page) __free_pages((page), 0)
 #define free_page(addr) free_pages((addr),0)
 
@@ -111,6 +113,14 @@ extern void FASTCALL(free_pages(unsigned long addr, unsigned long order));
 #define __GFP_IO	0x04
 #define __GFP_DMA	0x08
 
+
+#define GFP_BUFFER	(__GFP_HIGH | __GFP_WAIT)
+#define GFP_ATOMIC	(__GFP_HIGH)
+#define GFP_USER	(             __GFP_WAIT | __GFP_IO)
+#define GFP_KERNEL	(__GFP_HIGH | __GFP_WAIT | __GFP_IO)
+#define GFP_NFS		(__GFP_HIGH | __GFP_WAIT | __GFP_IO)
+#define GFP_KSWAPD	(                          __GFP_IO)
+#define GFP_DMA		__GFP_DMA
 
 extern void free_area_init(unsigned long * zones_size);
 

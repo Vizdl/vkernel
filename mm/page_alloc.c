@@ -1,4 +1,5 @@
 #include <asm/page.h>
+#include <asm/pgtable.h>
 #include <vkernel/mm.h>
 #include <vkernel/swap.h>
 #include <vkernel/init.h>
@@ -205,12 +206,24 @@ static struct page * rmqueue(zone_t *zone, unsigned long order)
 	return NULL;
 }
 
+/**
+ * @brief 释放 2^order 大小的物理页
+ * 
+ * @param page 要释放的第一个物理页
+ * @param order 2^order
+ */
 void __free_pages(struct page *page, unsigned long order)
 {
 	if (!PageReserved(page) && put_page_testzero(page))
 		__free_pages_ok(page, order);
 }
 
+/**
+ * @brief 释放 2^order 大小的物理页
+ * 
+ * @param addr 要释放的物理页地址
+ * @param order 2^order
+ */
 void free_pages(unsigned long addr, unsigned long order)
 {
 	struct page *fpage;
@@ -249,6 +262,29 @@ struct page * __alloc_pages(zonelist_t *zonelist, unsigned long order)
 	/* No luck.. */
 	printk("error : __alloc_pages: %lu-order allocation failed.\n", order);
 	return NULL;
+}
+
+static inline struct page * alloc_pages(int gfp_mask, unsigned long order)
+{
+	/*
+	 * Gets optimized away by the compiler.
+	 */
+	if (order >= MAX_ORDER)
+		return NULL;
+	return __alloc_pages(contig_page_data.node_zonelists+(gfp_mask), order);
+}
+
+/*
+ * Common helper functions.
+ */
+unsigned long __get_free_pages(int gfp_mask, unsigned long order)
+{
+	struct page * page;
+
+	page = alloc_pages(gfp_mask, order);
+	if (!page)
+		return 0;
+	return (unsigned long) page_address(page);
 }
 
 /*
