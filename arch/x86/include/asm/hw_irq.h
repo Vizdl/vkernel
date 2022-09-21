@@ -19,6 +19,9 @@ typedef struct {
 #define in_interrupt() ({ int __cpu = smp_processor_id(); \
 	(local_irq_count(__cpu) + local_bh_count(__cpu) != 0); })
 
+#define irq_enter(cpu, irq) do { local_irq_count(cpu)++; } while(0)
+#define irq_exit(cpu, irq) do { local_irq_count(cpu)++; } while(0)
+
 #define FIRST_EXTERNAL_VECTOR	0x20
 #define SYSCALL_VECTOR		    0x80
 
@@ -65,5 +68,7 @@ __asm__( \
 	"pushl $ret_from_intr\n\t" \
 	SYMBOL_NAME_STR(call_do_IRQ)":\n\t" \
 	"jmp "SYMBOL_NAME_STR(do_IRQ));
+
+static inline void hw_resend_irq(struct hw_interrupt_type *h, unsigned int i) {}
 
 #endif /* _ASM_HW_IRQ_H */

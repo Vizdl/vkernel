@@ -6,7 +6,7 @@
 // 对于每个 cpu 里中断信息的记载。
 extern irq_cpustat_t irq_stat[];			/* defined in asm/hardirq.h */
 
-#define __IRQ_STAT(cpu, member)	((void)(cpu), irq_stat[0].member)
+#define __IRQ_STAT(cpu, member)	(irq_stat[cpu].member)
 
   /* arch independent irq_stat fields */
 #define softirq_active(cpu)	__IRQ_STAT((cpu), __softirq_active)
