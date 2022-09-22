@@ -192,8 +192,8 @@ void __init setup_arch(void)
 void __init cpu_init (void)
 {    
 	uint64_t gdtr, idtr;
-	gdtr = ((sizeof(gdt_table) - 1) | ((uint64_t)(gdt_table) << 16));
-	idtr = ((sizeof(idt_table) - 1) | ((uint64_t)(idt_table) << 16));
+	gdtr = ((sizeof(gdt_table) - 1) | ((uint64_t)(unsigned long)(gdt_table) << 16));
+	idtr = ((sizeof(idt_table) - 1) | ((uint64_t)(unsigned long)(idt_table) << 16));
     load_gdtr(gdtr);
 	load_idtr(idtr);
 }
