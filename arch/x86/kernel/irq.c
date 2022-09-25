@@ -31,10 +31,10 @@ irq_desc_t irq_desc[NR_IRQS] __cacheline_aligned =
 	{ [0 ... NR_IRQS-1] = { 0, &no_irq_type, NULL, 0, SPIN_LOCK_UNLOCKED}};
 
 /**
- * @brief 向 irq 添加一个 irqaction
+ * @brief 向指定 irq 添加 irqaction
  * 
  * @param irq 中断向量号
- * @param new 中断处理 action
+ * @param new 中断处理对象
  * @return int 状态码
  */
 int setup_irq(unsigned int irq, struct irqaction * new)
@@ -42,22 +42,20 @@ int setup_irq(unsigned int irq, struct irqaction * new)
 	int shared = 0;
 	unsigned long flags;
 	struct irqaction *old, **p;
-	// 找到 irq 对应的 irq_desc
+	// 1. 根据硬中断号找到 irq 对应的 irq_desc_t
 	irq_desc_t *desc = irq_desc + irq;
 
-	/*
-	 * 以下代码块必须以原子方式执行
-	 */
 	spin_lock_irqsave(&desc->lock,flags);
+	// 2. 向对应 irq_desc_t 添加 irqaction
 	p = &desc->action;
 	if ((old = *p) != NULL) {
-		/* Can't share interrupts unless both agree to */
+		// 如若为不可分享中断
 		if (!(old->flags & new->flags & SA_SHIRQ)) {
 			spin_unlock_irqrestore(&desc->lock,flags);
 			return -EBUSY;
 		}
 
-		/* add new interrupt at end of irq queue */
+		// 设置 p 为 irq_desc_t 的 irqaction 列表末端
 		do {
 			p = &old->next;
 			old = *p;
@@ -65,9 +63,9 @@ int setup_irq(unsigned int irq, struct irqaction * new)
 		shared = 1;
 	}
 
-	/* 添加 new irqaction 到队列尾部(p指向最后一个 irqaction) */
+	// 添加 new irqaction 到队列尾部(p指向最后一个 irqaction) 
 	*p = new;
-
+	// 3. 如若为不可分享硬中断
 	if (!shared) {
 		desc->depth = 0;
 		desc->status &= ~(IRQ_DISABLED | IRQ_AUTODETECT | IRQ_WAITING);
@@ -97,36 +95,28 @@ int request_irq(unsigned int irq,
 	int retval;
 	struct irqaction * action;
 
-#if 1
-	/*
-	 * Sanity-check: shared interrupts should REALLY pass in
-	 * a real dev-ID, otherwise we'll have trouble later trying
-	 * to figure out which interrupt is which (messes up the
-	 * interrupt freeing logic etc).
-	 */
 	if (irqflags & SA_SHIRQ) {
 		if (!dev_id)
 			printk("Bad boy: %s (at 0x%x) called us without a dev_id!\n", devname, (&irq)[-1]);
 	}
-#endif
 
 	if (irq >= NR_IRQS)
 		return -EINVAL;
 	if (!handler)
 		return -EINVAL;
-
+	// 1. 创建 irqaction 结构
 	action = (struct irqaction *)
 			kmalloc(sizeof(struct irqaction), GFP_KERNEL);
 	if (!action)
 		return -ENOMEM;
-
+	// 2. 设置 irqaction 结构
 	action->handler = handler;
 	action->flags = irqflags;
 	action->mask = 0;
 	action->name = devname;
 	action->next = NULL;
 	action->dev_id = dev_id;
-
+	// 3. 向指定硬中断号设置 action 为其处理对象
 	retval = setup_irq(irq, action);
 	if (retval)
 		kfree(action);
@@ -148,25 +138,28 @@ void free_irq(unsigned int irq, void *dev_id)
 	if (irq >= NR_IRQS)
 		return;
 
+	// 1. 根据硬中断号找到 irq 对应的 irq_desc_t
 	desc = irq_desc + irq;
 	spin_lock_irqsave(&desc->lock,flags);
+	// 2. 寻找并释放对应
 	p = &desc->action;
 	for (;;) {
 		struct irqaction * action = *p;
 		if (action) {
 			struct irqaction **pp = p;
 			p = &action->next;
+			// 根据 dev_id 判断是否是需要卸载的 irqaction
 			if (action->dev_id != dev_id)
 				continue;
-
-			/* Found it - now remove it from the list of entries */
+			// 已经找到
 			*pp = action->next;
+			// 如若已经没有其他的 irqaction
 			if (!desc->action) {
 				desc->status |= IRQ_DISABLED;
 				desc->handler->shutdown(irq);
 			}
 			spin_unlock_irqrestore(&desc->lock,flags);
-
+			// 释放 irqaction 结构内存
 			kfree(action);
 			return;
 		}
@@ -242,25 +235,34 @@ void enable_irq(unsigned int irq)
 	spin_unlock_irqrestore(&desc->lock, flags);
 }
 
+/**
+ * @brief 硬中断处理函数
+ * 
+ * @param irq 待处理硬中断号
+ * @param regs 硬中断寄存器组
+ * @param action 处理结构
+ * @return int 处理结果
+ */
 int handle_IRQ_event(unsigned int irq, struct pt_regs * regs, struct irqaction * action)
 {
 	int status;
 	int cpu = smp_processor_id();
-
+	// 1. 进入硬中断处理流程
 	irq_enter(cpu, irq);
 
-	status = 1;	/* Force the "do bottom halves" bit */
-
+	status = 1;
+	// 2. 判断是否需要屏蔽硬中断
 	if (!(action->flags & SA_INTERRUPT))
 		__sti();
-	// 遍历 action 链表,执行所有处理函数。
+	// 3. 遍历 action 链表,执行所有处理函数。
 	do {
 		status |= action->flags;
 		action->handler(irq, action->dev_id, regs);
 		action = action->next;
 	} while (action);
+	// 4. 取消中断屏蔽
 	__cli();
-
+	// 5. 退出硬中断处理流程
 	irq_exit(cpu, irq);
 
 	return status;
@@ -273,24 +275,19 @@ int handle_IRQ_event(unsigned int irq, struct pt_regs * regs, struct irqaction *
  * @param regs 寄存器组
  */
 asmlinkage unsigned int do_IRQ(struct pt_regs regs)
-{	int irq = regs.orig_eax & 0xff; /* high bits used in ret_from_ code  */
-	irq_desc_t *desc = irq_desc + irq;	// 确定描述符
+{	
+	// 1. 根据寄存器组获取硬中断号
+	int irq = regs.orig_eax & 0xff;
+	irq_desc_t *desc = irq_desc + irq;
 	struct irqaction * action;
 	unsigned int status;
 
 	spin_lock(&desc->lock);
+	// 2. 回复硬中断 ack
 	desc->handler->ack(irq);
-	/*
-	   REPLAY is when Linux resends an IRQ that was dropped earlier
-	   WAITING is used by probe to mark irqs that are being tested
-	   */
+	// 3. 设置中断状态,并判断是否需要处理
 	status = desc->status & ~(IRQ_REPLAY | IRQ_WAITING);
 	status |= IRQ_PENDING; /* we _want_ to handle it */
-
-	/*
-	 * If the IRQ is disabled for whatever reason, we cannot
-	 * use the action we have.
-	 */
 	action = NULL;
 	if (!(status & (IRQ_DISABLED | IRQ_INPROGRESS))) {
 		action = desc->action;
@@ -299,25 +296,10 @@ asmlinkage unsigned int do_IRQ(struct pt_regs regs)
 	}
 	desc->status = status;
 
-	/*
-	 * If there is no IRQ handler or it was disabled, exit early.
-	   Since we set PENDING, if another processor is handling
-	   a different instance of this same irq, the other processor
-	   will take care of it.
-	 */
 	if (!action)
 		goto out;
 
-	/*
-	 * Edge triggered interrupts need to remember
-	 * pending events.
-	 * This applies to any hw interrupts that allow a second
-	 * instance of the same irq to arrive while we are in do_IRQ
-	 * or in the handler. But the code here only handles the _second_
-	 * instance of the irq, not the third or fourth. So it is mostly
-	 * useful for irq hardware that does not mask cleanly in an
-	 * SMP environment.
-	 */
+	// 4. 处理硬中断
 	for (;;) {
 		spin_unlock(&desc->lock);
 		handle_IRQ_event(irq, &regs, action);
@@ -327,12 +309,10 @@ asmlinkage unsigned int do_IRQ(struct pt_regs regs)
 			break;
 		desc->status &= ~IRQ_PENDING;
 	}
+	// 5. 去除状态中正在处理标志位
 	desc->status &= ~IRQ_INPROGRESS;
 out:
-	/*
-	 * The ->end() handler has to deal with interrupts which got
-	 * disabled while the handler was running.
-	 */
+	// 6. 回复硬中断处理结束
 	desc->handler->end(irq);
     return 0;
 }

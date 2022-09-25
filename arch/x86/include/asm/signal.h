@@ -3,6 +3,6 @@
 
 #define SA_INTERRUPT	0x20000000 /* dummy -- ignored */
 
-#define SA_SHIRQ		0x04000000
+#define SA_SHIRQ		0x04000000  // 可分享硬中断标志位
 
 #endif

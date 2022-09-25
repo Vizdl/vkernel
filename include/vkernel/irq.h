@@ -8,7 +8,7 @@
 
 #define NR_IRQS 224
 
-#define IRQ_INPROGRESS	1	/* IRQ handler active - do not enter! */
+#define IRQ_INPROGRESS	1	// 硬中断正在处理
 #define IRQ_DISABLED	2	/* IRQ disabled - do not enter! */
 #define IRQ_PENDING		4	/* IRQ pending - replay on enable */
 #define IRQ_REPLAY		8	/* IRQ has been replayed but not acked yet */
