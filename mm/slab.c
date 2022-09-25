@@ -1,5 +1,4 @@
 #include <asm/page.h>
-#include <asm/hardirq.h>
 #include <vkernel/mm.h>
 #include <vkernel/smp.h>
 #include <vkernel/irq.h>
@@ -11,73 +10,63 @@
 #include <vkernel/cache.h>
 #include <vkernel/string.h>
 #include <vkernel/spinlock.h>
+#include <vkernel/interrupt.h>
 
 typedef unsigned int kmem_bufctl_t;
 
-// 空闲内存集合表示
 typedef struct slab_s {
 	struct list_head	list;		// 将 slab 链入一个 kmem_cache_t
 	unsigned long		colouroff;	// 本 slab 着色区的大小
-	void			*s_mem;			// 指向对象区的起点
+	void				*s_mem;		// 指向对象区的起点,对象内存初始化为着色区之后
 	unsigned int		inuse;		// 已分配对象的计数器
 	// 从这里开始到特定长度,都是空闲列表指针
 	kmem_bufctl_t		free;		// 空闲对象链中的第一个对象的下标,需要乘以对象大小才能得到真正的空闲对象,如若为空,则表示为 BUFCTL_END
 } slab_t;
 
+// 核查页
+# define CHECK_PAGE(pg)	do { } while (0)
+
+// 标志位
+#define	CFLGS_OFF_SLAB	0x010000UL	// slab 管理结构内存是通过 kmem_cache_alloc 申请的,还是在 slab 管理页内。
+#define	CFLGS_OPTIMIZE	0x020000UL
+#define	OFF_SLAB(x)	((x)->flags & CFLGS_OFF_SLAB)
+#define	OPTIMIZE(x)	((x)->flags & CFLGS_OPTIMIZE)
+
+#define	DFLGS_GROWN	0x000001UL
+#define	GROWN(x)	((x)->dlags & DFLGS_GROWN)
+
+// kmem_bufctl_t
 #define BUFCTL_END 0xffffFFFF
 #define	SLAB_LIMIT 0xffffFFFE
 #define slab_bufctl(slabp) \
 	((kmem_bufctl_t *)(((slab_t*)slabp)+1))
 
-typedef struct kmem_cache_s kmem_cache_t;
-
-#define CACHE_NAMELEN	20	/* max name length for a slab cache */
-
-/* internal c_flags */
-#define	CFLGS_OFF_SLAB	0x010000UL	/* slab management in own cache */
-#define	CFLGS_OPTIMIZE	0x020000UL	/* optimized slab lookup */
-
-/* c_dflags (dynamic flags). Need to hold the spinlock to access this member */
-#define	DFLGS_GROWN	0x000001UL	/* don't reap a recently grown */
-
-#define	OFF_SLAB(x)	((x)->flags & CFLGS_OFF_SLAB)
-#define	OPTIMIZE(x)	((x)->flags & CFLGS_OPTIMIZE)
-#define	GROWN(x)	((x)->dlags & DFLGS_GROWN)
-
+// 专用缓冲区最小的大小(单位:字节)
+#define	BYTES_PER_WORD		sizeof(void *)
+// kmalloc 最大可申请对象为 2^5 = 32 个物理页
+#define	MAX_OBJ_ORDER	5	/* 32 pages */
+// kmem_cache_t 最大页帧的 order
+#define	MAX_GFP_ORDER	5	/* 32 pages */
+// kmem_cache_t 管理结构名最大长度
+#define CACHE_NAMELEN	20
+// 设置和获得物理页所属的 kmem_cache_t
 #define	SET_PAGE_CACHE(pg,x)  ((pg)->list.next = (struct list_head *)(x))
 #define	GET_PAGE_CACHE(pg)    ((kmem_cache_t *)(pg)->list.next)
+// 设置和获得物理页所属的 slab
 #define	SET_PAGE_SLAB(pg,x)   ((pg)->list.prev = (struct list_head *)(x))
 #define	GET_PAGE_SLAB(pg)     ((slab_t *)(pg)->list.prev)
-
-# define CHECK_PAGE(pg)	do { } while (0)
-
-// 统计宏
-#define	STATS_INC_ACTIVE(x)	do { } while (0)
-#define	STATS_DEC_ACTIVE(x)	do { } while (0)
-#define	STATS_INC_ALLOCED(x)	do { } while (0)
-#define	STATS_INC_GROWN(x)	do { } while (0)
-#define	STATS_INC_REAPED(x)	do { } while (0)
-#define	STATS_SET_HIGH(x)	do { } while (0)
-#define	STATS_INC_ERR(x)	do { } while (0)
-
-#define	MAX_OBJ_ORDER	5	/* 32 pages */
 
 #define	BREAK_GFP_ORDER_HI	2
 #define	BREAK_GFP_ORDER_LO	1
 static int slab_break_gfp_order = BREAK_GFP_ORDER_LO;
 
-#define	MAX_GFP_ORDER	5	/* 32 pages */
-
-#define	BYTES_PER_WORD		sizeof(void *)
-
-#define cache_chain (cache_cache.next)
-
 # define CREATE_MASK	(SLAB_HWCACHE_ALIGN | SLAB_NO_REAP | SLAB_CACHE_DMA)
 
 // 专用缓冲区
+typedef struct kmem_cache_s kmem_cache_t;
 struct kmem_cache_s {
-	struct list_head	slabs;			// slab 链表
-	struct list_head	*firstnotfull;	// 第一块有空闲对象的 slab 的指针
+	struct list_head	slabs;			// slab 链表(该缓冲区管理的所有 slab 都会在这里)
+	struct list_head	*firstnotfull;	// 第一块有空闲对象的 slab 的指针,当这个指针指向 slabs 则表示没有空闲对象的 slab。
 	unsigned int		objsize;		// 每个对象的大小
 	unsigned int	 	flags;	        /* constant flags */
 	unsigned int		num;			// 每个 slab 的对象数
@@ -86,17 +75,21 @@ struct kmem_cache_s {
 	unsigned int		gfporder;		// 单次申请 2^gfporder 大小个物理页
 	unsigned int		gfpflags;		// 申请物理页时使用的 flags
 
+	// 通过设置着色区使每个 slab 对象都按高速缓存中的缓存行大小对齐
+	// slab 的内存本来就是页对齐的,所以也是缓存行大小对齐
+	// 但是为了使不同 slab 上同一项对位置的对象的起始地址在高速缓存中互相错开
+	// (这样可以改善高速缓存的效率),所以尽可能将着色区安排成不同的大小。
 	size_t			    colour;		    /* cache colouring range */
 	unsigned int		colour_off;	    /* colour offset */
-	unsigned int		colour_next;	/* cache colouring */
+	unsigned int		colour_next;	// slab->colouroff = colour_off * colour_next, colour_next 每申请一个 slab 自增,超过 colour 时变回 0。
 	kmem_cache_t		*slabp_cache;	// 申请 slab 的专用缓冲区(并非链表之类的结构)
-	unsigned int		growing;		// 剩余的可成长个数,单位是 slab
+	unsigned int		growing;		// 该缓冲区的 slab 的个数
 	unsigned int		dflags;		    /* dynamic flags */
 
-	/* constructor func */
+	// 初始化缓冲内部结构
 	void (*ctor)(void *, kmem_cache_t *, unsigned long);
 
-	/* de-constructor func */
+	// 释放缓冲内部结构
 	void (*dtor)(void *, kmem_cache_t *, unsigned long);
 
 	unsigned long		failures;
@@ -111,9 +104,6 @@ typedef struct cache_sizes {
 	kmem_cache_t	*cs_cachep;
 	kmem_cache_t	*cs_dmacachep;
 } cache_sizes_t;
-
-void * kmem_cache_alloc (kmem_cache_t *cachep, int flags);
-void kmem_cache_free (kmem_cache_t *cachep, void *objp);
 
 // 提供给非专用缓冲区使用
 static cache_sizes_t cache_sizes[] = {
@@ -145,6 +135,8 @@ static kmem_cache_t cache_cache = {
 	colour_off:	L1_CACHE_BYTES,
 	name:		"kmem_cache",
 };
+
+#define cache_chain (cache_cache.next)
 
 /* Place maintainer for reaping. */
 static kmem_cache_t *clock_searchp = &cache_cache;
@@ -187,14 +179,18 @@ static void kmem_cache_estimate (unsigned long gfporder, size_t size,
 	*left_over = wastage;
 }
 
+/**
+ * @brief 根据 size 和 flags 判断使用 cache_sizes 中 哪个 kmem_cache_t
+ * 
+ * @param size 申请的内存大小
+ * @param gfpflags 申请内存的 flags
+ * @return kmem_cache_t* 选中的 kmem_cache_t
+ */
 kmem_cache_t * kmem_find_general_cachep (size_t size, int gfpflags)
 {
 	cache_sizes_t *csizep = cache_sizes;
 
-	/* This function could be moved to the header file, and
-	 * made inline so consumers can quickly determine what
-	 * cache pointer they require.
-	 */
+	// 根据大小选择对应的 cache_sizes_t
 	for ( ; csizep->cs_size; csizep++) {
 		if (size > csizep->cs_size)
 			continue;
@@ -204,10 +200,10 @@ kmem_cache_t * kmem_find_general_cachep (size_t size, int gfpflags)
 }
 
 /**
- * @brief 创建一个专用缓冲区
+ * @brief 创建一个专用缓冲区并返回
  * 
  * @param name 专用缓冲区名
- * @param size 对象大小
+ * @param size 专用缓冲区对象大小
  * @param offset 
  * @param flags 标志位
  * @param ctor 
@@ -223,9 +219,7 @@ kmem_cache_create (const char *name, size_t size, size_t offset,
 	size_t left_over, align, slab_size;
 	kmem_cache_t *cachep = NULL;
 
-	/*
-	 * Sanity checks... these are all serious usage bugs.
-	 */
+	// 1. 参数检查
 	if ((!name) ||
 		((strlen(name) >= CACHE_NAMELEN - 1)) ||
 		in_interrupt() ||
@@ -235,23 +229,17 @@ kmem_cache_create (const char *name, size_t size, size_t offset,
 		(offset < 0 || offset > size))
 			BUG();
 
-	/*
-	 * Always checks flags, a caller might be expecting debug
-	 * support which isn't available.
-	 */
 	if (flags & ~CREATE_MASK)
 		BUG();
 
-	// 申请缓冲区描述对象
+	// 2. 申请缓冲区描述对象并初始化
 	cachep = (kmem_cache_t *) kmem_cache_alloc(&cache_cache, SLAB_KERNEL);
 	if (!cachep)
 		goto opps;
 	memset(cachep, 0, sizeof(kmem_cache_t));
 
-	/* Check that size is in terms of words.  This is needed to avoid
-	 * unaligned accesses for some archs when redzoning is used, and makes
-	 * sure any on-slab bufctl's are also correctly aligned.
-	 */
+
+	// 3. 设置专用缓冲区参数
 	if (size & (BYTES_PER_WORD-1)) {
 		size += (BYTES_PER_WORD-1);
 		size &= ~(BYTES_PER_WORD-1);
@@ -262,28 +250,15 @@ kmem_cache_create (const char *name, size_t size, size_t offset,
 	if (flags & SLAB_HWCACHE_ALIGN)
 		align = L1_CACHE_BYTES;
 
-	/* 计算专用缓冲区的大小 */
 	if (size >= (PAGE_SIZE>>3))
-		/*
-		 * Size is large, assume best to place the slab management obj
-		 * off-slab (should allow better packing of objs).
-		 */
 		flags |= CFLGS_OFF_SLAB;
 
 	if (flags & SLAB_HWCACHE_ALIGN) {
-		/* Need to adjust size so that objs are cache aligned. */
-		/* Small obj size, can get at least two per cache line. */
-		/* FIXME: only power of 2 supported, was better */
 		while (size < align/2)
 			align /= 2;
 		size = (size+align-1)&(~(align-1));
 	}
 
-	/* Cal size (in pages) of slabs, and the num of objs per slab.
-	 * This could be made much more intelligent.  For now, try to avoid
-	 * using high page-orders for slabs.  When the gfp() funcs are more
-	 * friendly towards high-order requests, this should be changed.
-	 */
 	do {
 		unsigned int break_flag = 0;
 cal_wastage:
@@ -357,11 +332,9 @@ next:
 		cachep->slabp_cache = kmem_find_general_cachep(slab_size,0);
 	cachep->ctor = ctor;
 	cachep->dtor = dtor;
-	/* Copy name over so we don't have problems with unloaded modules */
+	
 	strcpy(cachep->name, name);
-
-	/* Need the semaphore to access the chain. */
-	// down(&cache_chain_sem);
+	// 4. 判断是否有 name 冲突
 	{
 		struct list_head *p;
 
@@ -374,11 +347,8 @@ next:
 		}
 	}
 
-	/* There is no reason to lock our new cache before we
-	 * link it in - no one knows about it yet...
-	 */
+	// 5. 将新生成的缓冲区插入链表
 	list_add(&cachep->next, &cache_chain);
-	// up(&cache_chain_sem);
 opps:
 	return cachep;
 }
@@ -386,11 +356,11 @@ opps:
 
 
 /**
- * @brief 申请物理页
+ * @brief 申请虚拟内存(2^cachep->gfporder 个物理页大小)
  * 
- * @param cachep 
- * @param flags 
- * @return void* 
+ * @param cachep 缓冲区
+ * @param flags 标志位
+ * @return void* 申请到的内存的虚拟地址
  */
 static inline void * kmem_getpages (kmem_cache_t *cachep, unsigned long flags)
 {
@@ -443,10 +413,10 @@ static inline void kmem_cache_init_objs (kmem_cache_t * cachep,
 
 
 /**
- * @brief 根据专用缓冲区与对象指针获取对应的 slab
+ * @brief 创建 slab 管理结构
  * 
- * @param cachep 专用缓冲区
- * @param objp 对象指针
+ * @param cachep slab 所属的专用缓冲区
+ * @param objp 该 slab 管理的虚拟内存指针
  * @param colour_off 
  * @param local_flags 
  * @return slab_t* 对应的 slab
@@ -455,17 +425,12 @@ static inline slab_t * kmem_cache_slabmgmt (kmem_cache_t *cachep,
 			void *objp, int colour_off, int local_flags)
 {
 	slab_t *slabp;
-	
+	// 如若 slab 结构不在 slab 所属管理页内
 	if (OFF_SLAB(cachep)) {
-		/* Slab management obj is off-slab. */
 		slabp = kmem_cache_alloc(cachep->slabp_cache, local_flags);
 		if (!slabp)
 			return NULL;
 	} else {
-		/* FIXME: change to
-			slabp = objp
-		 * if you enable OPTIMIZE
-		 */
 		slabp = objp+colour_off;
 		colour_off += L1_CACHE_ALIGN(cachep->num *
 				sizeof(kmem_bufctl_t) + sizeof(slab_t));
@@ -494,36 +459,21 @@ static int kmem_cache_grow (kmem_cache_t * cachep, int flags)
 	unsigned long	 ctor_flags;
 	unsigned long	 save_flags;
 
-	/* Be lazy and only check for valid flags here,
- 	 * keeping it out of the critical path in kmem_cache_alloc().
-	 */
 	if (flags & ~(SLAB_DMA|SLAB_LEVEL_MASK|SLAB_NO_GROW))
 		BUG();
 	if (flags & SLAB_NO_GROW)
 		return 0;
 
-	/*
-	 * The test for missing atomic flag is performed here, rather than
-	 * the more obvious place, simply to reduce the critical path length
-	 * in kmem_cache_alloc(). If a caller is seriously mis-behaving they
-	 * will eventually be caught here (where it matters).
-	 */
 	if (in_interrupt() && (flags & SLAB_LEVEL_MASK) != SLAB_ATOMIC)
 		BUG();
 
 	ctor_flags = SLAB_CTOR_CONSTRUCTOR;
 	local_flags = (flags & SLAB_LEVEL_MASK);
 	if (local_flags == SLAB_ATOMIC)
-		/*
-		 * Not allowed to sleep.  Need to tell a constructor about
-		 * this - it might need to know...
-		 */
 		ctor_flags |= SLAB_CTOR_ATOMIC;
 
-	/* About to mess with non-constant members - lock. */
 	spin_lock_irqsave(&cachep->spinlock, save_flags);
 
-	/* Get colour for the slab, and cal the next value. */
 	offset = cachep->colour_next;
 	cachep->colour_next++;
 	if (cachep->colour_next >= cachep->colour)
@@ -534,20 +484,11 @@ static int kmem_cache_grow (kmem_cache_t * cachep, int flags)
 	cachep->growing++;
 	spin_unlock_irqrestore(&cachep->spinlock, save_flags);
 
-	/* A series of memory allocations for a new slab.
-	 * Neither the cache-chain semaphore, or cache-lock, are
-	 * held, but the incrementing c_growing prevents this
-	 * cache from being reaped or shrunk.
-	 * Note: The cache could be selected in for reaping in
-	 * kmem_cache_reap(), but when the final test is made the
-	 * growing value will be seen.
-	 */
-
-	/* Get mem for the objs. */
+	// 获得虚拟内存
 	if (!(objp = kmem_getpages(cachep, flags)))
 		goto failed;
 
-	/* Get slab management. */
+	// 创建 slab 管理结构并初始化
 	if (!(slabp = kmem_cache_slabmgmt(cachep, objp, offset, local_flags)))
 		goto opps1;
 
@@ -570,7 +511,6 @@ static int kmem_cache_grow (kmem_cache_t * cachep, int flags)
 	list_add_tail(&slabp->list,&cachep->slabs);
 	if (cachep->firstnotfull == &cachep->slabs)
 		cachep->firstnotfull = &slabp->list;
-	STATS_INC_GROWN(cachep);
 	cachep->failures = 0;
 
 	spin_unlock_irqrestore(&cachep->spinlock, save_flags);
@@ -595,10 +535,6 @@ static inline void * kmem_cache_alloc_one_tail (kmem_cache_t *cachep,
 							 slab_t *slabp)
 {
 	void *objp;
-
-	STATS_INC_ALLOCED(cachep);
-	STATS_INC_ACTIVE(cachep);
-	STATS_SET_HIGH(cachep);
 
 	/* get obj pointer */
 	slabp->inuse++;
@@ -647,15 +583,15 @@ static inline void * __kmem_cache_alloc (kmem_cache_t *cachep, int flags)
 	void* objp;
 
 	kmem_cache_alloc_head(cachep, flags);
-// 申请内存
 try_again:
 	local_irq_save(save_flags);
+	// 申请内存
 	objp = kmem_cache_alloc_one(cachep);
 	local_irq_restore(save_flags);
 	return objp;
-// 创建一个新 slab
 alloc_new_slab:
 	local_irq_restore(save_flags);
+	// 创建一个新 slab
 	if (kmem_cache_grow(cachep, flags))
 		goto try_again;
 	return NULL;
@@ -672,6 +608,7 @@ static inline void kmem_cache_free_one(kmem_cache_t *cachep, void *objp)
 	slab_t* slabp;
 
 	CHECK_PAGE(virt_to_page(objp));
+	// 根据虚拟内存地址找到 slab 管理结构
 	slabp = GET_PAGE_SLAB(virt_to_page(objp));
 	{
 		// 计算出这块内存的偏移量
@@ -680,7 +617,6 @@ static inline void kmem_cache_free_one(kmem_cache_t *cachep, void *objp)
 		slab_bufctl(slabp)[objnr] = slabp->free;
 		slabp->free = objnr;
 	}
-	STATS_DEC_ACTIVE(cachep);
 	
 	/* fixup slab chain */
 	if (slabp->inuse-- == cachep->num)
@@ -760,14 +696,16 @@ void kmem_cache_free (kmem_cache_t *cachep, void *objp)
 void * kmalloc (size_t size, int flags)
 {
 	cache_sizes_t *csizep = cache_sizes;
-
+	// 1. 遍历 cache_sizes 找到大小最接近的缓冲区
 	for (; csizep->cs_size; csizep++) {
 		if (size > csizep->cs_size)
 			continue;
+		// 1.1 通过大小最接近的缓冲区申请内存并返回
 		return __kmem_cache_alloc(flags & GFP_DMA ?
 			 csizep->cs_dmacachep : csizep->cs_cachep, flags);
 	}
-	BUG(); // too big size
+	// 2. 如若申请的内存比 cache_sizes 最大的缓冲区还大
+	BUG();
 	return NULL;
 }
 
@@ -792,8 +730,15 @@ void kfree (const void *objp)
 
 #define drain_cpu_caches(cachep)	do { } while (0)
 
+/**
+ * @brief 销毁缓冲区 cachep 的 slab
+ * 
+ * @param cachep 
+ * @param slabp 
+ */
 static void kmem_slab_destroy (kmem_cache_t *cachep, slab_t *slabp)
 {
+	// 1. 释放每块缓冲内部结构
 	if (cachep->dtor
 	) {
 		int i;
@@ -803,13 +748,19 @@ static void kmem_slab_destroy (kmem_cache_t *cachep, slab_t *slabp)
 				(cachep->dtor)(objp, cachep, 0);
 		}
 	}
-
+	// 2. 释放 slab 管理的内存页
 	kmem_freepages(cachep, slabp->s_mem-slabp->colouroff);
+	// 3. 释放缓冲区内存(根据 slab 管理结构的内存位置决定是否要释放)
 	if (OFF_SLAB(cachep))
 		kmem_cache_free(cachep->slabp_cache, slabp);
 }
 
-
+/**
+ * @brief 销毁缓冲区内部结构
+ * 
+ * @param cachep 待销毁缓冲区
+ * @return int 返回码
+ */
 static int __kmem_cache_shrink(kmem_cache_t *cachep)
 {
 	slab_t *slabp;
@@ -819,10 +770,10 @@ static int __kmem_cache_shrink(kmem_cache_t *cachep)
 
 	spin_lock_irq(&cachep->spinlock);
 
-	/* If the cache is growing, stop shrinking. */
+	// 销毁所有的 slab
 	while (!cachep->growing) {
 		struct list_head *p;
-
+		// 获得最后一个 slab
 		p = cachep->slabs.prev;
 		if (p == &cachep->slabs)
 			break;
@@ -836,6 +787,7 @@ static int __kmem_cache_shrink(kmem_cache_t *cachep)
 			cachep->firstnotfull = &cachep->slabs;
 
 		spin_unlock_irq(&cachep->spinlock);
+		// 销毁 slab
 		kmem_slab_destroy(cachep, slabp);
 		spin_lock_irq(&cachep->spinlock);
 	}
@@ -844,28 +796,30 @@ static int __kmem_cache_shrink(kmem_cache_t *cachep)
 	return ret;
 }
 
+/**
+ * @brief 销毁指定缓冲区
+ * 
+ * @param cachep 待销毁的缓冲区
+ * @return int 返回码
+ */
 int kmem_cache_destroy (kmem_cache_t * cachep)
 {
 	if (!cachep || in_interrupt() || cachep->growing)
 		BUG();
 
-	/* Find the cache in the chain of caches. */
-	// down(&cache_chain_sem);
-	/* the chain is never empty, cache_cache is never destroyed */
+	// 1. 将 cachep 从链表中删除
 	if (clock_searchp == cachep)
 		clock_searchp = list_entry(cachep->next.next,
 						kmem_cache_t, next);
 	list_del(&cachep->next);
-	// up(&cache_chain_sem);
-
+	// 2. 销毁缓冲区内部结构
 	if (__kmem_cache_shrink(cachep)) {
 		printk("kernel error -> kmem_cache_destroy: Can't free all objects %p\n",
 		       cachep);
-		// down(&cache_chain_sem);
 		list_add(&cachep->next,&cache_chain);
-		// up(&cache_chain_sem);
 		return 1;
 	}
+	// 3. 释放 kmem_cache_t 内存
 	kmem_cache_free(&cache_cache, cachep);
 
 	return 0;
@@ -879,31 +833,25 @@ void __init kmem_cache_sizes_init(void)
 {
 	cache_sizes_t *sizes = cache_sizes;
 	char name[20];
-	/*
-	 * Fragmentation resistance on low memory - only use bigger
-	 * page orders on machines with more than 32MB of memory.
-	 */
+
 	if (num_physpages > (32 << 20) >> PAGE_SHIFT)
 		slab_break_gfp_order = BREAK_GFP_ORDER_HI;
+	// 1. 遍历 cache_sizes 数组, 并挨个 cache_sizes_t 进行初始化。
 	do {
-		/* For performance, all the general caches are L1 aligned.
-		 * This should be particularly beneficial on SMP boxes, as it
-		 * eliminates "false sharing".
-		 * Note for systems short on memory removing the alignment will
-		 * allow tighter packing of the smaller caches. */
 		sprintf(name,"size-%Zd",sizes->cs_size);
+		// 1.1 为 cache_sizes_t 创建专用缓冲区(使用普通内存)
 		if (!(sizes->cs_cachep =
 			kmem_cache_create(name, sizes->cs_size,
 					0, SLAB_HWCACHE_ALIGN, NULL, NULL))) {
 			BUG();
 		}
 
-		/* Inc off-slab bufctl limit until the ceiling is hit. */
 		if (!(OFF_SLAB(sizes->cs_cachep))) {
 			offslab_limit = sizes->cs_size-sizeof(slab_t);
 			offslab_limit /= 2;
 		}
 		sprintf(name, "size-%Zd(DMA)",sizes->cs_size);
+		// 1.2 建立 dma 专用缓冲区(使用 DMA 内存)
 		sizes->cs_dmacachep = kmem_cache_create(name, sizes->cs_size, 0,
 			      SLAB_CACHE_DMA|SLAB_HWCACHE_ALIGN, NULL, NULL);
 		if (!sizes->cs_dmacachep)
@@ -915,15 +863,12 @@ void __init kmem_cache_sizes_init(void)
 void __init kmem_cache_init(void)
 {
 	size_t left_over;
-
-	// init_MUTEX(&cache_chain_sem);
+	// 1. 初始化 cache_cache
 	INIT_LIST_HEAD(&cache_chain);
-
 	kmem_cache_estimate(0, cache_cache.objsize, 0,
 			&left_over, &cache_cache.num);
 	if (!cache_cache.num)
 		BUG();
-
 	cache_cache.colour = left_over/cache_cache.colour_off;
 	cache_cache.colour_next = 0;
 }
