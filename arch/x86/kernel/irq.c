@@ -1,13 +1,13 @@
 #include <asm/errno.h>
 #include <asm/ptrace.h>
 #include <asm/signal.h>
-#include <asm/interrupt.h>
 #include <vkernel/irq.h>
 #include <vkernel/smp.h>
 #include <vkernel/slab.h>
 #include <vkernel/kernel.h>
 #include <vkernel/stddef.h>
 #include <vkernel/linkage.h>
+#include <vkernel/interrupt.h>
 
 // 默认中断操作函数
 static void enable_none(unsigned int irq) { }

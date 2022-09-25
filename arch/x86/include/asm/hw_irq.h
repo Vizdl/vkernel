@@ -2,25 +2,7 @@
 #define _ASM_HW_IRQ_H
 
 #include <asm/segment.h>
-#include <vkernel/cache.h>
 #include <vkernel/linkage.h>
-
-typedef struct {
-	unsigned int __softirq_active;
-	unsigned int __softirq_mask;
-	unsigned int __local_irq_count;
-	unsigned int __local_bh_count;
-	unsigned int __syscall_count;
-	unsigned int __nmi_count;	/* arch dependent */
-} ____cacheline_aligned irq_cpustat_t;
-
-#include <vkernel/irq_cpustat.h>
-
-#define in_interrupt() ({ int __cpu = smp_processor_id(); \
-	(local_irq_count(__cpu) + local_bh_count(__cpu) != 0); })
-
-#define irq_enter(cpu, irq) do { local_irq_count(cpu)++; } while(0)
-#define irq_exit(cpu, irq) do { local_irq_count(cpu)++; } while(0)
 
 #define FIRST_EXTERNAL_VECTOR	0x20
 #define SYSCALL_VECTOR		    0x80

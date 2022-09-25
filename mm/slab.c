@@ -1,4 +1,5 @@
 #include <asm/page.h>
+#include <asm/hardirq.h>
 #include <vkernel/mm.h>
 #include <vkernel/smp.h>
 #include <vkernel/irq.h>
@@ -476,6 +477,13 @@ static inline slab_t * kmem_cache_slabmgmt (kmem_cache_t *cachep,
 	return slabp;
 }
 
+/**
+ * @brief 给专用缓冲区添加 slab
+ * 
+ * @param cachep 待添加 slab 的专用缓冲区
+ * @param flags 
+ * @return int 
+ */
 static int kmem_cache_grow (kmem_cache_t * cachep, int flags)
 {
 	slab_t	*slabp;
