@@ -42,6 +42,11 @@ SECTIONS
 		*(.bss)
 		. = ALIGN(4096);
 	}
+	.data.init_task : AT(ADDR(.data.init_task) - 0xC0000000)
+    {
+        *(.data.init_task)
+        . = ALIGN(8192);
+    }
  	_edata = .;			/* End of data section */
 	_end = . ;
 }

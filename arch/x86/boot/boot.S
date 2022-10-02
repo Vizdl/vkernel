@@ -18,6 +18,7 @@
 #define ASM_FILE 1
 #include <asm/page.h>
 #include <asm/multiboot2.h>
+#include <vkernel/linkage.h>
 
 /* C symbol format. HAVE ASM USCORE is defined by configure. */
 #ifdef HAVE_ASM_USCORE
@@ -25,9 +26,6 @@
 #else
 # define EXT_C(sym) sym
 #endif
-
-/* The size of our stack (16KB). */
-#define STACK_SIZE 0x4000
 
 /* The flags for the Multiboot header. */
 #ifdef __ELF__
@@ -103,7 +101,7 @@ multiboot_header_end:
 multiboot_entry:
 	/* Initialize the stack pointer. */
 	movl $__PAGE_OFFSET, %ecx
-	movl $(stack + STACK_SIZE), %esp
+    movl (stack_start), %esp
 	subl %ecx, %esp
 
 	/* Reset EFLAGS. */
@@ -129,5 +127,10 @@ loop:
 halt_message:
 	.asciz "Halted."
 
-	/* Our stack area. */
-	.comm stack, STACK_SIZE
+.section .data.init
+ENTRY(stack_start)
+	# init_task 栈指针, 8192 是 INIT_TASK_SIZE
+	# 这里放弃了一部分内核栈空间,否则应该是 
+	# SYMBOL_NAME(init_task_union)+8192 + sizeof(struct task_struct)
+	.long SYMBOL_NAME(init_task_union)+8192
+.previous
