@@ -3,11 +3,8 @@
 #ifndef I386_GDT_H
 #define I386_GDT_H
 
-#ifndef _LINUX_TYPES_H
-#include <vkernel/types.h>
-#endif
-
 #include <asm/segment.h>
+#include <vkernel/types.h>
 
 // ----------------  GDT描述符属性  ----------------
 
