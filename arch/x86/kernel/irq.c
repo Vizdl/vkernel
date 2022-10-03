@@ -27,6 +27,8 @@ struct hw_interrupt_type no_irq_type = {
 	end_none
 };
 
+volatile unsigned long irq_err_count;
+
 irq_desc_t irq_desc[NR_IRQS] __cacheline_aligned =
 	{ [0 ... NR_IRQS-1] = { 0, &no_irq_type, NULL, 0, SPIN_LOCK_UNLOCKED}};
 
