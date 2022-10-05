@@ -44,12 +44,17 @@ void (*interrupt[NR_IRQS])(void) = {
 #define __byte(x,y) 	(((unsigned char *)&(y))[x])
 #define cached_21	(__byte(0,cached_irq_mask))
 #define cached_A1	(__byte(1,cached_irq_mask))
-
+// i8259A 芯片操作锁,避免并行设置
 spinlock_t i8259A_lock = SPIN_LOCK_UNLOCKED;
+// 中断掩码缓存
 static unsigned int cached_irq_mask = 0xffff;
 
-unsigned long io_apic_irqs;
-
+/**
+ * @brief 核心函数 : 获取isr寄存器，判断是否是真实的中断
+ * 
+ * @param irq 中断号
+ * @return int 0 表示不是,非 0 表示是。
+ */
 static inline int i8259A_irq_real(unsigned int irq)
 {
     int value;
@@ -67,6 +72,11 @@ static inline int i8259A_irq_real(unsigned int irq)
     return value;
 }
 
+/**
+ * @brief 核心函数 : 禁用中断
+ * 
+ * @param irq 中断号
+ */
 void disable_8259A_irq(unsigned int irq)
 {
 	unsigned int mask = 1 << irq;
@@ -81,6 +91,11 @@ void disable_8259A_irq(unsigned int irq)
 	spin_unlock_irqrestore(&i8259A_lock, flags);
 }
 
+/**
+ * @brief 核心函数 : 启用中断
+ * 
+ * @param irq 中断号
+ */
 void enable_8259A_irq(unsigned int irq)
 {
 	unsigned int mask = ~(1 << irq);
@@ -95,22 +110,11 @@ void enable_8259A_irq(unsigned int irq)
 	spin_unlock_irqrestore(&i8259A_lock, flags);
 }
 
-int i8259A_irq_pending(unsigned int irq)
-{
-	unsigned int mask = 1<<irq;
-	unsigned long flags;
-	int ret;
-
-	spin_lock_irqsave(&i8259A_lock, flags);
-	if (irq < 8)
-		ret = inb(0x20) & mask;
-	else
-		ret = inb(0xA0) & (mask >> 8);
-	spin_unlock_irqrestore(&i8259A_lock, flags);
-
-	return ret;
-}
-
+/**
+ * @brief 中断结束操作
+ * 
+ * @param irq 中断号
+ */
 static void end_8259A_irq (unsigned int irq)
 {
 	if (!(irq_desc[irq].status & (IRQ_DISABLED|IRQ_INPROGRESS)))
@@ -119,35 +123,30 @@ static void end_8259A_irq (unsigned int irq)
 
 #define shutdown_8259A_irq	disable_8259A_irq
 
-void mask_and_ack_8259A(unsigned int);
-
+/**
+ * @brief 中断安装操作
+ * 
+ * @param irq 中断号
+ * @return 是否处于 pending
+ */
 static unsigned int startup_8259A_irq(unsigned int irq)
 { 
 	enable_8259A_irq(irq);
 	return 0; /* never anything pending */
 }
 
+/**
+ * @brief 中断回复函数
+ * 
+ * @param irq 中断号
+ */
 void mask_and_ack_8259A(unsigned int irq)
 {
     unsigned int irqmask = 1 << irq;
     unsigned long flags;
 
     spin_lock_irqsave(&i8259A_lock, flags);
-    /*
-     * Lightweight spurious IRQ detection. We do not want
-     * to overdo spurious IRQ handling - it's usually a sign
-     * of hardware problems, so we only do the checks we can
-     * do without slowing down good hardware unnecesserily.
-     *
-     * Note that IRQ7 and IRQ15 (the two spurious IRQs
-     * usually resulting from the 8259A-1|2 PICs) occur
-     * even if the IRQ is masked in the 8259A. Thus we
-     * can check spurious 8259A IRQs without doing the
-     * quite slow i8259A_irq_real() call for every IRQ.
-     * This does not cover 100% of spurious interrupts,
-     * but should be enough to warn the user that there
-     * is something bad going on ...
-     */
+	// 如若中断已禁用
     if (cached_irq_mask & irqmask)
         goto spurious_8259A_irq;
     cached_irq_mask |= irqmask;
@@ -196,6 +195,7 @@ spurious_8259A_irq:
     }
 }
 
+// i8259 硬中断处理方法
 static struct hw_interrupt_type i8259A_irq_type = {
 	"XT-PIC",
 	startup_8259A_irq,
@@ -207,6 +207,11 @@ static struct hw_interrupt_type i8259A_irq_type = {
 	NULL
 };
 
+/**
+ * @brief 初始化 8259A 可编程中断芯片
+ * 
+ * @param auto_eoi 
+ */
 void __init init_8259A(int auto_eoi)
 {
 	unsigned long flags;
@@ -250,6 +255,10 @@ void __init init_8259A(int auto_eoi)
 	spin_unlock_irqrestore(&i8259A_lock, flags);
 }
 
+/**
+ * @brief 初始化 8259A 可编程中断芯片
+ * 
+ */
 void __init init_ISA_irqs (void)
 {
 	int i;
