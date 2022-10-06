@@ -96,3 +96,6 @@ void __init softirq_init(void)
 {
 
 }
+
+
+struct tasklet_head tasklet_vec[NR_CPUS] __cacheline_aligned;
