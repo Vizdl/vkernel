@@ -46,7 +46,7 @@ int setup_irq(unsigned int irq, struct irqaction * new)
 	struct irqaction *old, **p;
 	// 1. 根据硬中断号找到 irq 对应的 irq_desc_t
 	irq_desc_t *desc = irq_desc + irq;
-
+	printk("setup irq action : %s -> %d\n", new->name, irq);
 	spin_lock_irqsave(&desc->lock,flags);
 	// 2. 向对应 irq_desc_t 添加 irqaction
 	p = &desc->action;
@@ -252,17 +252,20 @@ int handle_IRQ_event(unsigned int irq, struct pt_regs * regs, struct irqaction *
 	// 1. 进入硬中断处理流程
 	irq_enter(cpu, irq);
 
+	printk("handle_IRQ_event irq %d\n", irq);
+
 	status = 1;
 	// 2. 判断是否需要屏蔽硬中断
 	if (!(action->flags & SA_INTERRUPT))
 		__sti();
 	// 3. 遍历 action 链表,执行所有处理函数。
 	do {
+		printk("int %d -> do irq action %s\n", irq, action->name);
 		status |= action->flags;
 		action->handler(irq, action->dev_id, regs);
 		action = action->next;
 	} while (action);
-	// 4. 取消中断屏蔽
+	// 4. 开启中断屏蔽
 	__cli();
 	// 5. 退出硬中断处理流程
 	irq_exit(cpu, irq);
@@ -283,6 +286,8 @@ asmlinkage unsigned int do_IRQ(struct pt_regs regs)
 	irq_desc_t *desc = irq_desc + irq;
 	struct irqaction * action;
 	unsigned int status;
+
+	printk("do_IRQ : %d\n", irq);
 
 	spin_lock(&desc->lock);
 	// 2. 回复硬中断 ack

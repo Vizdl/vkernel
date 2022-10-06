@@ -3,6 +3,7 @@
 #include <asm/desc.h>
 #include <vkernel/irq.h>
 #include <vkernel/init.h>
+#include <vkernel/timex.h>
 #include <vkernel/kernel.h>
 #include <vkernel/spinlock.h>
 
@@ -41,7 +42,9 @@ void (*interrupt[NR_IRQS])(void) = {
 	IRQLIST_16(0x0),
 };
 
+// 获取不同的 byte
 #define __byte(x,y) 	(((unsigned char *)&(y))[x])
+// 在 cached_irq_mask 分别获取 21 与 A1 的缓存地址
 #define cached_21	(__byte(0,cached_irq_mask))
 #define cached_A1	(__byte(1,cached_irq_mask))
 // i8259A 芯片操作锁,避免并行设置
@@ -142,6 +145,7 @@ static unsigned int startup_8259A_irq(unsigned int irq)
  */
 void mask_and_ack_8259A(unsigned int irq)
 {
+	printk("mask_and_ack_8259A  .... \n");
     unsigned int irqmask = 1 << irq;
     unsigned long flags;
 
@@ -152,6 +156,7 @@ void mask_and_ack_8259A(unsigned int irq)
     cached_irq_mask |= irqmask;
 
 handle_real_irq:
+	printk("mask_and_ack_8259A handle_real_irq\n");
     if (irq & 8) {
         inb(0xA1);		/* DUMMY - (do we need this?) */
         outb(cached_A1,0xA1);
@@ -170,16 +175,14 @@ spurious_8259A_irq:
      */
     if (i8259A_irq_real(irq))
         /*
-         * oops, the IRQ _is_ in service according to the
-         * 8259A - not spurious, go handle it.
+         * 根据8259A，IRQ正在使用中-不是假的，去处理它。
          */
         goto handle_real_irq;
 
     {
         static int spurious_irq_mask;
         /*
-         * At this point we can be sure the IRQ is spurious,
-         * lets ACK and report it. [once per IRQ]
+         * 此时，我们可以确定IRQ是虚假的，让我们确认并报告它。[每个IRQ一次]
          */
         if (!(spurious_irq_mask & irqmask)) {
             printk("spurious 8259A interrupt: IRQ%d.\n", irq);
@@ -187,9 +190,7 @@ spurious_8259A_irq:
         }
         irq_err_count++;
         /*
-         * Theoretically we do not have to handle this IRQ,
-         * but in Linux this does not cause problems and is
-         * simpler for us.
+         * 理论上我们不必处理这个IRQ，但在Linux中，这不会引起问题，而且对我们来说更简单。
          */
         goto handle_real_irq;
     }
@@ -302,5 +303,14 @@ void __init init_IRQ(void)
 			set_intr_gate(vector, interrupt[i]);
 	}
 
+	/*
+	 * Set the clock to HZ Hz, we already have a valid
+	 * vector now:
+	 */
+	outb_p(0x34,0x43);		/* binary, mode 2, LSB/MSB, ch 0 */
+	outb_p(LATCH & 0xff , 0x40);	/* LSB */
+	outb(LATCH >> 8 , 0x40);	/* MSB */
+
+	__sti();
     return ;
 }

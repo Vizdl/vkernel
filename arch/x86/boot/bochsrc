@@ -11,7 +11,7 @@ vgaromimage: file=$BOCHS_ROOT_PATH/share/bochs/VGABIOS-lgpl-latest
 boot: disk
  
 #设置日志文件的输出
-log: build/bochs.out
+log: bochs.out
  
 #开启或关闭某些功能，修改成你们对应的地址
 mouse: enabled=0
