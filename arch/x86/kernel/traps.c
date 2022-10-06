@@ -1,9 +1,8 @@
+#include <asm/desc.h>
+#include <vkernel/irq.h>
 #include <vkernel/init.h>
 #include <vkernel/kernel.h>
 #include <vkernel/linkage.h>
-#include <asm/ptrace.h>
-#include <asm/hw_irq.h>
-#include <asm/desc.h>
 
 extern void __init cpu_init (void);
 

@@ -1,6 +1,7 @@
 #ifndef _LINUX_INTERRUPT_H
 #define _LINUX_INTERRUPT_H
 
+#include <asm/ptrace.h>
 #include <asm/softirq.h>
 #include <asm/hardirq.h>
 

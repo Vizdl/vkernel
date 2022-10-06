@@ -145,9 +145,10 @@ static unsigned int startup_8259A_irq(unsigned int irq)
  */
 void mask_and_ack_8259A(unsigned int irq)
 {
-	printk("mask_and_ack_8259A  .... \n");
     unsigned int irqmask = 1 << irq;
     unsigned long flags;
+	
+	printk("mask_and_ack_8259A  .... \n");
 
     spin_lock_irqsave(&i8259A_lock, flags);
 	// 如若中断已禁用

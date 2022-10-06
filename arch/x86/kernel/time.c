@@ -11,7 +11,7 @@
  */
 static inline void do_timer_interrupt(int irq, void *dev_id, struct pt_regs *regs)
 {
-    printk("time...\n");
+    printk("do_timer_interrupt -> irq : %d, dev_id : %p, regs : %p\n", irq, dev_id, regs);
 }
 
 static void timer_interrupt(int irq, void *dev_id, struct pt_regs *regs)
