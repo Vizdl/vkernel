@@ -3,6 +3,8 @@
 #include <vkernel/sched.h>
 #include <vkernel/threads.h>
 
+struct mm_struct init_mm = INIT_MM(init_mm);
+
 // init_task 的 栈 与 task_struct 的结合体
 union task_union init_task_union 
 	__attribute__((__section__(".data.init_task"))) =
