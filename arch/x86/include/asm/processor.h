@@ -45,6 +45,33 @@ struct tss_struct {
 	unsigned long __cacheline_filler[5];
 };
 
+// 内核态线程切换的上下文保存
+struct thread_struct {
+	unsigned long	esp0;
+	unsigned long	eip;
+	unsigned long	esp;
+	unsigned long	fs;
+	unsigned long	gs;
+/* Hardware debugging registers */
+	unsigned long	debugreg[8];  /* %%db0-7 debug registers */
+/* fault info */
+	unsigned long	cr2, trap_no, error_code;
+	unsigned long		screen_bitmap;
+	unsigned long		v86flags, v86mask, v86mode, saved_esp0;
+/* IO permissions */
+	int		ioperm;
+	unsigned long	io_bitmap[IO_BITMAP_SIZE+1];
+};
+
+#define INIT_THREAD  {						\
+	0,							\
+	0, 0, 0, 0, 						\
+	{ [0 ... 7] = 0 },	/* debugging registers */	\
+	0, 0, 0,						\
+	0,0,0,0,0,						\
+	0,{~0,}			/* io permissions */		\
+}
+
 #define INIT_TSS  {						\
 	0,0, /* back_link, __blh */				\
 	sizeof(init_stack) + (long) &init_stack, /* esp0 */	\

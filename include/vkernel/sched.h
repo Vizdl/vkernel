@@ -5,9 +5,11 @@
 #ifdef __KERNEL__
 
 #include <asm/current.h>
+#include <asm/processor.h>
 
 struct task_struct {
-	volatile long state;	/* -1 unrunnable, 0 runnable, >0 stopped */
+	volatile long state;			/* -1 unrunnable, 0 runnable, >0 stopped */
+	struct thread_struct thread;	/* CPU-specific state of this task */
 };
 
 #ifndef INIT_TASK_SIZE
@@ -16,7 +18,8 @@ struct task_struct {
 
 #define INIT_TASK(tsk)	\
 {									\
-    state:		0						\
+    state:		0,					\
+	thread:		INIT_THREAD,		\
 }
 
 union task_union {
