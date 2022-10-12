@@ -7,6 +7,7 @@
 #include <vkernel/threads.h>
 
 #define IO_BITMAP_SIZE	32
+#define IO_BITMAP_OFFSET offsetof(struct tss_struct,io_bitmap)
 #define INVALID_IO_BITMAP_OFFSET 0x8000
 
 
@@ -45,7 +46,7 @@ struct tss_struct {
 	unsigned long __cacheline_filler[5];
 };
 
-// 内核态线程切换的上下文保存
+// 内核态线程切换的上下文
 struct thread_struct {
 	unsigned long	esp0;
 	unsigned long	eip;

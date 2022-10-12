@@ -5,3 +5,4 @@ obj-y += i8259.o
 obj-y += irq.o
 obj-y += init_task.o
 obj-y += time.o
+obj-y += process.o
