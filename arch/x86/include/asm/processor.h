@@ -2,6 +2,7 @@
 #define __ASM_I386_PROCESSOR_H
 
 #include <asm/desc.h>
+#include <asm/unistd.h>
 #include <asm/segment.h>
 #include <asm/cpufeature.h>
 #include <vkernel/threads.h>
@@ -118,5 +119,7 @@ struct cpuinfo_x86 {
 
 extern struct cpuinfo_x86 boot_cpu_data;
 #define current_cpu_data boot_cpu_data
+
+extern int kernel_thread(int (*fn)(void *), void * arg, unsigned long flags);
 
 #endif
