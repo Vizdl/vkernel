@@ -13,6 +13,25 @@ struct mm_struct {
 	pgd_t * pgd;
 };
 
+// 进程状态
+#define TASK_RUNNING			0	/* 运行态 */
+#define TASK_INTERRUPTIBLE		1	/* 可中断睡眠 */
+#define TASK_UNINTERRUPTIBLE	2	/* 不可中断睡眠 */
+#define TASK_ZOMBIE				4
+#define TASK_STOPPED			8	/* 停止 */
+
+#define __set_task_state(tsk, state_value)		\
+	do { (tsk)->state = (state_value); } while (0)
+
+#define set_task_state(tsk, state_value)		\
+	__set_task_state((tsk), (state_value))
+
+#define __set_current_state(state_value)			\
+	do { current->state = (state_value); } while (0)
+
+#define set_current_state(state_value)		\
+	__set_current_state(state_value)
+
 struct task_struct {
 	volatile long state;			/* -1 unrunnable, 0 runnable, >0 stopped */
 	struct thread_struct thread;	/* CPU-specific state of this task */
