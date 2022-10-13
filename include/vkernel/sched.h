@@ -1,9 +1,6 @@
 #ifndef _LINUX_SCHED_H
 #define _LINUX_SCHED_H
 
-
-#ifdef __KERNEL__
-
 #include <asm/current.h>
 #include <asm/page.h>
 #include <asm/pgtable.h>
@@ -34,6 +31,7 @@ struct mm_struct {
 
 struct task_struct {
 	volatile long state;			/* -1 unrunnable, 0 runnable, >0 stopped */
+	int processor;
 	struct thread_struct thread;	/* CPU-specific state of this task */
 	struct mm_struct *mm;
 	struct mm_struct *active_mm;
@@ -61,8 +59,14 @@ union task_union {
 	unsigned long stack[INIT_TASK_SIZE/sizeof(long)];
 };
 
-extern void trap_init(void);
 
-#endif /* __KERNEL__ */
+/* PID hashing. (shouldnt this be dynamic?) */
+#define PIDHASH_SZ (4096 >> 2)
+extern struct task_struct *pidhash[PIDHASH_SZ];
+extern union task_union init_task_union;
+extern struct mm_struct init_mm;
+
+extern void trap_init(void);
+extern void sched_init(void);
 
 #endif /* _LINUX_SCHED_H */

@@ -25,7 +25,8 @@ asmlinkage void __init start_kernel(void)
     // for test irq
     // __asm__ __volatile__ ("int $32");
     show_init_task();
-    time_init();
+    // time_init();
+    sched_init();
     // kmem_cache_init();
     // mem_init();
     // kmem_cache_sizes_init();
