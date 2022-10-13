@@ -16,6 +16,12 @@ void __init show_init_task(void)
     return;
 }
 
+static int init(void * unused)
+{
+    printk("init...\n");
+    return 0;
+}
+
 asmlinkage void __init start_kernel(void)
 {
     printk("start kernel...\n");
@@ -31,6 +37,7 @@ asmlinkage void __init start_kernel(void)
     // mem_init();
     // kmem_cache_sizes_init();
     printk("end kernel...\n");
+	kernel_thread(init, NULL, CLONE_FS | CLONE_FILES | CLONE_SIGNAL);
     while (1);
     return;
 }
