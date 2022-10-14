@@ -2,8 +2,11 @@
 #include <asm/system.h>
 #include <asm/processor.h>
 #include <vkernel/smp.h>
+#include <vkernel/irq.h>
 #include <vkernel/sched.h>
 #include <vkernel/string.h>
+#include <vkernel/kernel.h>
+#include <vkernel/linkage.h>
 
 /*
  * Create a kernel thread
@@ -17,9 +20,7 @@ int kernel_thread(int (*fn)(void *), void * arg, unsigned long flags)
 		"int $0x80\n\t"		/* Linux/i386 system call */
 		"cmpl %%esp,%%esi\n\t"	/* child or parent? */
 		"je 1f\n\t"		/* parent - jump */
-		/* Load the argument into eax, and push it.  That way, it does
-		 * not matter whether the called function is compiled with
-		 * -mregparm or not.  */
+		/* 子节点调用 fn, 执行结束后调用 exit 退出线程 */
 		"movl %4,%%eax\n\t"
 		"pushl %%eax\n\t"		
 		"call *%5\n\t"		/* call fn */
@@ -32,6 +33,12 @@ int kernel_thread(int (*fn)(void *), void * arg, unsigned long flags)
 		 "b" (flags | CLONE_VM)
 		: "memory");
 	return retval;
+}
+
+asmlinkage int sys_clone(struct pt_regs regs)
+{
+    printk("sys_clone...\n");
+	return 0;
 }
 
 void __switch_to(struct task_struct *prev_p, struct task_struct *next_p)

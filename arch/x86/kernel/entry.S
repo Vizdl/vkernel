@@ -53,28 +53,17 @@ OLDSS		= 0x38
 
 .text
 
-restore_all:
-	popl %ebx;
-	popl %ecx;
-	popl %edx;
-	popl %esi;
-	popl %edi;
-	popl %ebp;
-	popl %eax;
-1:	popl %ds;
-2:	popl %es;
-	addl $4,%esp;
-3:	iret;
-
-
 	ALIGN
 ret_from_exception:
 ENTRY(ret_from_intr)
 	GET_CURRENT(%ebx)
-ALIGN
 	movl EFLAGS(%esp),%eax		# mix EFLAGS and CS
 	movb CS(%esp),%al
 	jmp restore_all
+	ALIGN
+handle_softirq:
+	call SYMBOL_NAME(do_softirq)
+	jmp ret_from_intr
 
 
 ENTRY(divide_error)
@@ -204,8 +193,24 @@ ENTRY(spurious_interrupt_bug)
 	pushl $ SYMBOL_NAME(do_spurious_interrupt_bug)
 	jmp error_code
 
-# 暂时仅输出
+
 ENTRY(system_call)
-	pushl $0
-	pushl $ SYMBOL_NAME(do_system_call)
-	jmp error_code
+	pushl %eax			# save orig_eax
+	SAVE_ALL
+	GET_CURRENT(%ebx)
+	call *SYMBOL_NAME(sys_call_table)(,%eax,4)
+	movl %eax,EAX(%esp)		# save the return value
+# 从系统调用返回
+ENTRY(ret_from_sys_call)
+	# 判断是否有软中断发生
+	movl SYMBOL_NAME(irq_stat),%ecx		# softirq_active
+	testl SYMBOL_NAME(irq_stat)+4,%ecx	# softirq_mask
+	jne   handle_softirq
+restore_all:
+	RESTORE_ALL
+	
+.data
+# 函数调用表.data
+ENTRY(sys_call_table)
+	.long SYMBOL_NAME(sys_exit)
+	.long SYMBOL_NAME(sys_clone)

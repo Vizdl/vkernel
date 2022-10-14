@@ -44,6 +44,9 @@ asmlinkage void do_softirq(void)
 	// 1. 获取当前 CPU
 	int cpu = smp_processor_id();
 	__u32 active, mask;
+
+	printk("do_softirq...\n");
+	
 	// 2. 如若在中断上下文中则返回
 	if (in_interrupt())
 		return;
