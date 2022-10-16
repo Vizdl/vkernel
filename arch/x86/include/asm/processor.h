@@ -5,6 +5,7 @@
 #include <asm/unistd.h>
 #include <asm/segment.h>
 #include <asm/cpufeature.h>
+#include <vkernel/mm.h>
 #include <vkernel/threads.h>
 
 #define IO_BITMAP_SIZE	32
@@ -119,6 +120,11 @@ struct cpuinfo_x86 {
 
 extern struct cpuinfo_x86 boot_cpu_data;
 #define current_cpu_data boot_cpu_data
+
+
+#define alloc_task_struct() ((struct task_struct *) __get_free_pages(GFP_KERNEL,1))
+#define free_task_struct(p) free_pages((unsigned long) (p), 1)
+#define get_task_struct(tsk)      atomic_inc(&virt_to_page(tsk)->count)
 
 extern int kernel_thread(int (*fn)(void *), void * arg, unsigned long flags);
 

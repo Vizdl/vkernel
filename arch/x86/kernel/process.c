@@ -37,8 +37,15 @@ int kernel_thread(int (*fn)(void *), void * arg, unsigned long flags)
 
 asmlinkage int sys_clone(struct pt_regs regs)
 {
+	unsigned long clone_flags;
+	unsigned long newsp;
     printk("sys_clone...\n");
-	return 0;
+
+	clone_flags = regs.ebx;
+	newsp = regs.ecx;
+	if (!newsp)
+		newsp = regs.esp;
+	return do_fork(clone_flags, newsp, &regs, 0);
 }
 
 void __switch_to(struct task_struct *prev_p, struct task_struct *next_p)

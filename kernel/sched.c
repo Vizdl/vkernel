@@ -2,6 +2,10 @@
 #include <vkernel/init.h>
 #include <vkernel/sched.h>
 #include <vkernel/kernel.h>
+#include <vkernel/cache.h>
+#include <vkernel/spinlock.h>
+
+rwlock_t tasklist_lock __cacheline_aligned = RW_LOCK_UNLOCKED;	/* outer */
 
 void __init sched_init(void)
 {
