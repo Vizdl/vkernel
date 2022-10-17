@@ -3,6 +3,7 @@
 
 #include <asm/current.h>
 #include <asm/page.h>
+#include <asm/param.h>
 #include <asm/ptrace.h>
 #include <asm/pgtable.h>
 #include <asm/processor.h>
@@ -12,6 +13,9 @@
 struct mm_struct {
 	pgd_t * pgd;
 };
+
+#define DEF_COUNTER	(10*HZ/100)	/* 100 ms time slice */
+#define DEF_NICE	(0)
 
 /*
  * cloning flags:
@@ -35,6 +39,12 @@ struct mm_struct {
 #define TASK_UNINTERRUPTIBLE	2	/* 不可中断睡眠 */
 #define TASK_ZOMBIE				4
 #define TASK_STOPPED			8	/* 停止 */
+
+// 调度策略
+#define SCHED_OTHER		0
+#define SCHED_FIFO		1
+#define SCHED_RR		2
+#define SCHED_YIELD		0x10
 
 // 遍历任务列表
 #define for_each_task(p) \
@@ -65,6 +75,11 @@ struct task_struct {
 	struct mm_struct *mm;
 	struct mm_struct *active_mm;
 	struct list_head run_list;		// 就绪态时该链表设到
+    volatile long need_resched;		// 在返回用户态的时候如若设立该标志则会重调度
+    unsigned long policy;			// 该进程的调度策略, eg : SCHED_OTHER
+    long counter;
+    long nice;						// 调度优先值
+    unsigned long rt_priority;
 };
 
 #ifndef INIT_TASK_SIZE
@@ -82,6 +97,11 @@ struct task_struct {
 	thread:		INIT_THREAD,		\
 	mm:			NULL,				\
     active_mm:	&init_mm,			\
+    counter:	DEF_COUNTER,		\
+    nice:		DEF_NICE,			\
+    policy:		SCHED_OTHER,		\
+    next_task:	&tsk,				\
+    prev_task:	&tsk,				\
 }
 
 union task_union {
