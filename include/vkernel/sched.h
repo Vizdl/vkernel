@@ -138,6 +138,7 @@ static inline int task_on_runqueue(struct task_struct *p)
 	return (p->run_list.next != NULL);
 }
 
+int get_pid(unsigned long flags);
 void hash_pid(struct task_struct*);
 void unhash_pid(struct task_struct*);
 struct task_struct *find_task_by_pid(int);

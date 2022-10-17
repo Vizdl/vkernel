@@ -4,4 +4,5 @@ obj-y += softirq.o
 obj-y += sched.o
 obj-y += fork.o
 obj-y += exit.o
+obj-y += pid.o
 obj-y += pidhash.o
