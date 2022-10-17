@@ -11,6 +11,7 @@
 #define IO_BITMAP_SIZE	32
 #define IO_BITMAP_OFFSET offsetof(struct tss_struct,io_bitmap)
 #define INVALID_IO_BITMAP_OFFSET 0x8000
+#define THREAD_SIZE (2*PAGE_SIZE)
 
 
 #define init_task	(init_task_union.task)

@@ -1,3 +1,4 @@
+#include <vkernel/mm.h>
 #include <vkernel/init.h>
 #include <vkernel/slab.h>
 #include <vkernel/sched.h>
@@ -9,6 +10,7 @@ extern void setup_arch(void);
 extern void init_IRQ(void);
 extern void mem_init(void);
 extern void time_init(void);
+extern void fork_init(unsigned long);
 
 void __init show_init_task(void)
 {
@@ -24,6 +26,7 @@ static int init(void * unused)
 
 asmlinkage void __init start_kernel(void)
 {
+	unsigned long mempages;
     printk("start kernel...\n");
     setup_arch();
     trap_init();
@@ -35,8 +38,10 @@ asmlinkage void __init start_kernel(void)
     sched_init();
     // kmem_cache_init();
     mem_init();
+    mempages = num_physpages;
+    fork_init(mempages);
     // kmem_cache_sizes_init();
-    printk("end kernel...\n");
 	kernel_thread(init, NULL, CLONE_FS | CLONE_FILES | CLONE_SIGNAL);
+    printk("end kernel...\n");
     return;
 }

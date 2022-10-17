@@ -1,4 +1,5 @@
 #include <asm/errno.h>
+#include <vkernel/init.h>
 #include <vkernel/sched.h>
 #include <vkernel/kernel.h>
 #include <vkernel/threads.h>
@@ -6,6 +7,7 @@
 
 struct task_struct *pidhash[PIDHASH_SZ];
 
+int max_threads;
 int last_pid;		// 上一次分配的 pid
 int nr_running;		// 就绪态的进程个数
 
@@ -90,4 +92,10 @@ int do_fork(unsigned long clone_flags, unsigned long stack_start,
 	wake_up_process(p);
 fork_out:
 	return retval;
+}
+
+void __init fork_init(unsigned long mempages)
+{
+	printk("fork_init...\n");
+	max_threads = mempages / (THREAD_SIZE/PAGE_SIZE) / 2;
 }
