@@ -80,6 +80,9 @@ struct task_struct {
     long counter;
     long nice;						// 调度优先值
     unsigned long rt_priority;
+	/* PID hash table linkage. */
+	struct task_struct *pidhash_next;
+	struct task_struct **pidhash_pprev;
 };
 
 #ifndef INIT_TASK_SIZE
@@ -134,5 +137,9 @@ static inline int task_on_runqueue(struct task_struct *p)
 {
 	return (p->run_list.next != NULL);
 }
+
+void hash_pid(struct task_struct*);
+void unhash_pid(struct task_struct*);
+struct task_struct *find_task_by_pid(int);
 
 #endif /* _LINUX_SCHED_H */

@@ -5,8 +5,6 @@
 #include <vkernel/threads.h>
 #include <vkernel/spinlock.h>
 
-struct task_struct *pidhash[PIDHASH_SZ];
-
 int max_threads;
 int last_pid;		// 上一次分配的 pid
 int nr_running;		// 就绪态的进程个数
@@ -88,6 +86,7 @@ int do_fork(unsigned long clone_flags, unsigned long stack_start,
 	p->run_list.next = NULL;
 	p->run_list.prev = NULL;
 
+	hash_pid(p);
 
 	wake_up_process(p);
 fork_out:
