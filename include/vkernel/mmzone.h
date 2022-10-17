@@ -1,9 +1,6 @@
 #ifndef _LINUX_MMZONE_H
 #define _LINUX_MMZONE_H
 
-#ifdef __KERNEL__
-#ifndef __ASSEMBLY__
-
 #include <vkernel/config.h>
 #include <vkernel/spinlock.h>
 #include <vkernel/list.h>
@@ -65,6 +62,4 @@ extern pg_data_t contig_page_data;
 #define MAP_ALIGN(x)	((((x) % sizeof(mem_map_t)) == 0) ? (x) : ((x) + \
 		sizeof(mem_map_t) - ((x) % sizeof(mem_map_t))))
 
-#endif /* !__ASSEMBLY__ */
-#endif /* __KERNEL__ */
 #endif /* _LINUX_MMZONE_H */

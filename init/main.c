@@ -34,7 +34,7 @@ asmlinkage void __init start_kernel(void)
     // time_init();
     sched_init();
     // kmem_cache_init();
-    // mem_init();
+    mem_init();
     // kmem_cache_sizes_init();
     printk("end kernel...\n");
 	kernel_thread(init, NULL, CLONE_FS | CLONE_FILES | CLONE_SIGNAL);

@@ -42,6 +42,7 @@ static void __free_pages_ok (struct page *page, unsigned long order)
 	free_area_t *area;
 	struct page *base;
 	zone_t *zone;
+	// printk("__free_pages_ok ..., struct page addr : %p\n", page);
 
 	if (!VALID_PAGE(page))
 		BUG();
@@ -214,6 +215,7 @@ static struct page * rmqueue(zone_t *zone, unsigned long order)
  */
 void __free_pages(struct page *page, unsigned long order)
 {
+	// printk("__free_pages ...\n");
 	if (!PageReserved(page) && put_page_testzero(page))
 		__free_pages_ok(page, order);
 }
@@ -254,6 +256,7 @@ struct page * __alloc_pages(zonelist_t *zonelist, unsigned long order)
 			break;
 		if (!z->size)
 			BUG();
+		// printk("__alloc_pages in zone : %s\n", z->name);
 		page = rmqueue(z, order);
 		if (page)
 			return page;
@@ -345,7 +348,7 @@ static inline void build_zonelists(pg_data_t *pgdat)
  * @param zones_size 每个zone的物理页个数
  * @param zone_start_paddr 第一个 zone 开始地址
  * @param zholes_size 每个zone的空洞物理页个数
- * @param lmem_map 
+ * @param lmem_map mem_map 数组内存,如若不为0,则用该数组为 mem_map, 如若为 0, 则使用 alloc_bootmem_node 申请内存
  */
 void __init free_area_init_core(int nid, pg_data_t *pgdat, struct page **gmap,
 	unsigned long *zones_size, unsigned long zone_start_paddr, 
@@ -373,10 +376,13 @@ void __init free_area_init_core(int nid, pg_data_t *pgdat, struct page **gmap,
 	// 创建 lmem_map struct page 数组
 	map_size = (totalpages + 1)*sizeof(struct page);
 	if (lmem_map == (struct page *)0) {
+		// 申请数组内存
 		lmem_map = (struct page *) alloc_bootmem_node(pgdat, map_size);
+		// 对齐内存
 		lmem_map = (struct page *)(PAGE_OFFSET + 
 			MAP_ALIGN((unsigned long)lmem_map - PAGE_OFFSET));
 	}
+	printk("lmem_map vir addr : %p, map_size : %d\n", lmem_map, map_size);
 	*gmap = pgdat->node_mem_map = lmem_map;
 	pgdat->node_size = totalpages;
 	pgdat->node_start_paddr = zone_start_paddr;

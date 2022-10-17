@@ -10,6 +10,7 @@
 #include <vkernel/bootmem.h>
 
 pgd_t swapper_pg_dir[PTRS_PER_PGD] __page_aligned;
+static unsigned long totalram_pages;
 
 static void __init pagetable_init (void)
 {
@@ -89,5 +90,7 @@ void __init paging_init(void)
 }
 
 void __init mem_init(void){
-    num_physpages = max_low_pfn;
+	max_mapnr = num_physpages = max_low_pfn;
+	/* this will put all low memory onto the freelists */
+	totalram_pages += free_all_bootmem();
 }

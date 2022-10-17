@@ -97,6 +97,8 @@ typedef struct page {
 #define ClearPageReserved(page)		clear_bit(PG_reserved, &(page)->flags)
 
 extern mem_map_t * mem_map;
+extern unsigned long max_mapnr;
+extern unsigned long num_physpages;
 
 
 extern void FASTCALL(__free_pages(struct page *page, unsigned long order));
