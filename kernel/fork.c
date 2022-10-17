@@ -6,7 +6,8 @@
 
 struct task_struct *pidhash[PIDHASH_SZ];
 
-int last_pid;
+int last_pid;		// 上一次分配的 pid
+int nr_running;		// 就绪态的进程个数
 
 /* Protects next_safe and last_pid. */
 spinlock_t lastpid_lock = SPIN_LOCK_UNLOCKED;
@@ -77,8 +78,16 @@ int do_fork(unsigned long clone_flags, unsigned long stack_start,
 	if (!p)
 		goto fork_out;
 
+	p->state = TASK_UNINTERRUPTIBLE;
+
     p->pid = get_pid(clone_flags);
     printk("do_fork, pid = %d...\n", p->pid);
+	
+	p->run_list.next = NULL;
+	p->run_list.prev = NULL;
+
+
+	wake_up_process(p);
 fork_out:
 	return retval;
 }

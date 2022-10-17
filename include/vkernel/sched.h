@@ -7,6 +7,7 @@
 #include <asm/pgtable.h>
 #include <asm/processor.h>
 #include <vkernel/spinlock.h>
+#include <vkernel/kernel.h>
 
 struct mm_struct {
 	pgd_t * pgd;
@@ -63,6 +64,7 @@ struct task_struct {
 	struct task_struct *next_task, *prev_task;	// 将所有进程串在一个链表上
 	struct mm_struct *mm;
 	struct mm_struct *active_mm;
+	struct list_head run_list;		// 就绪态时该链表设到
 };
 
 #ifndef INIT_TASK_SIZE
@@ -93,11 +95,24 @@ union task_union {
 extern struct task_struct *pidhash[PIDHASH_SZ];
 extern union task_union init_task_union;
 extern struct mm_struct init_mm;
-extern int last_pid;
 extern rwlock_t tasklist_lock;
+extern int nr_running;
+extern int last_pid;
 
 extern void trap_init(void);
 extern void sched_init(void);
 extern int do_fork(unsigned long, unsigned long, struct pt_regs *, unsigned long);
+extern void FASTCALL(wake_up_process(struct task_struct * tsk));
+
+/**
+ * @brief 判断进程是否在 runqueue 上
+ * 
+ * @param p 待判断的进程
+ * @return int 判断结果
+ */
+static inline int task_on_runqueue(struct task_struct *p)
+{
+	return (p->run_list.next != NULL);
+}
 
 #endif /* _LINUX_SCHED_H */
