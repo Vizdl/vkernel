@@ -220,11 +220,11 @@ static void __init free_bootmem_core(bootmem_data_t *bdata, unsigned long addr, 
 
 static unsigned long __init free_all_bootmem_core(pg_data_t *pgdat)
 {
-	printk("free_all_bootmem_core ...\n");
 	struct page *page = pgdat->node_mem_map;
 	bootmem_data_t *bdata = pgdat->bdata;
 	unsigned long i, count, total = 0;
 	unsigned long idx;
+	printk("free_all_bootmem_core ...\n");
 
 	if (!bdata->node_bootmem_map) BUG();
 
