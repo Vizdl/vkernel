@@ -8,8 +8,6 @@
 spinlock_t runqueue_lock __cacheline_aligned = SPIN_LOCK_UNLOCKED;  /* inner */
 rwlock_t tasklist_lock __cacheline_aligned = RW_LOCK_UNLOCKED;	/* outer */
 
-static LIST_HEAD(runqueue_head);	// 就绪态进程运行队列
-
 void __init sched_init(void)
 {
 	/*
@@ -69,17 +67,6 @@ out:
 static inline int preemption_goodness(struct task_struct * prev, struct task_struct * p, int cpu)
 {
 	return goodness(p, cpu, prev->active_mm) - goodness(prev, cpu, prev->active_mm);
-}
-
-/**
- * @brief 将进程添加到 runqueue_head
- * 
- * @param p 待添加 runqueue_head 的进程
- */
-static inline void add_to_runqueue(struct task_struct * p)
-{
-	list_add(&p->run_list, &runqueue_head);
-	nr_running++;
 }
 
 static void reschedule_idle(struct task_struct * p)
