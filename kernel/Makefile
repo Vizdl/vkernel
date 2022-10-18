@@ -7,3 +7,4 @@ obj-y += exit.o
 obj-y += pid.o
 obj-y += pidhash.o
 obj-y += runqueue.o
+obj-y += goodness.o

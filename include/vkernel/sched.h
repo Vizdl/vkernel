@@ -161,4 +161,7 @@ struct task_struct *find_task_by_pid(int);
 void add_to_runqueue(struct task_struct *);
 void move_last_runqueue(struct task_struct * );
 void move_first_runqueue(struct task_struct *);
+// goodness 相关
+int goodness(struct task_struct * p, int this_cpu, struct mm_struct *this_mm);
+int preemption_goodness(struct task_struct * prev, struct task_struct * p, int cpu);
 #endif /* _LINUX_SCHED_H */
