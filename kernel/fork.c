@@ -26,13 +26,22 @@ int do_fork(unsigned long clone_flags, unsigned long stack_start,
 		goto fork_out;
 
 	p->state = TASK_UNINTERRUPTIBLE;
-
-    p->pid = get_pid(clone_flags);
-    printk("do_fork, pid = %d...\n", p->pid);
-	
 	p->run_list.next = NULL;
 	p->run_list.prev = NULL;
 
+    p->pid = get_pid(clone_flags);
+    printk("do_fork, pid = %d...\n", p->pid);
+	// 2. 将该 task_struct 加入到三大数据结构组织里
+	// 2.1 根据克隆 flags 的值不同,将其加入到进程组里
+	if ((clone_flags & CLONE_VFORK) || !(clone_flags & CLONE_PARENT)) {
+		p->p_opptr = current;
+		if (!(p->ptrace & PT_PTRACED))
+			p->p_pptr = current;
+	}
+	p->p_cptr = NULL;
+	// 2.2 添加到 task list 里
+	SET_LINKS(p);
+	// 2.3 根据 pid 加入到 pid 哈希表里
 	hash_pid(p);
 
 	wake_up_process(p);

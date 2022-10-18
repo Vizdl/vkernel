@@ -7,8 +7,9 @@
 #include <asm/ptrace.h>
 #include <asm/pgtable.h>
 #include <asm/processor.h>
-#include <vkernel/spinlock.h>
 #include <vkernel/kernel.h>
+#include <vkernel/spinlock.h>
+#include <vkernel/task_list.h>
 
 struct mm_struct {
 	pgd_t * pgd;
@@ -32,6 +33,12 @@ struct mm_struct {
 #define CLONE_THREAD	0x00010000	/* Same thread group? */
 
 #define CLONE_SIGNAL	(CLONE_SIGHAND | CLONE_THREAD)
+
+// Ptrace flags
+#define PT_PTRACED	0x00000001
+#define PT_TRACESYS	0x00000002
+#define PT_DTRACE	0x00000004	/* delayed trace (used on m68k, i386) */
+#define PT_TRACESYSGOOD	0x00000008
 
 // 进程状态
 #define TASK_RUNNING			0	/* 就绪态/可运行态 */
@@ -65,24 +72,31 @@ struct mm_struct {
 	__set_current_state(state_value)
 
 struct task_struct {
-	pid_t pid;						// 进程ID
-	pid_t session;					// 进程会话
-	pid_t pgrp;						// 与进程组有关
 	volatile long state;			// 进程状态 : -1 unrunnable, 0 runnable, >0 stopped
 	int processor;
 	struct thread_struct thread;	/* CPU-specific state of this task */
-	struct task_struct *next_task, *prev_task;	// 将所有进程串在一个链表上
 	struct mm_struct *mm;
 	struct mm_struct *active_mm;
 	struct list_head run_list;		// 就绪态时该链表设到
-    volatile long need_resched;		// 在返回用户态的时候如若设立该标志则会重调度
-    unsigned long policy;			// 该进程的调度策略, eg : SCHED_OTHER
+    unsigned long ptrace;
     long counter;
+	/* 进程号进程组相关 */
+	pid_t pid;						// 进程ID
+	pid_t session;					// 进程会话
+	pid_t pgrp;						// 与进程组有关
+	/* 调度有关属性 */
     long nice;						// 调度优先值
-    unsigned long rt_priority;
-	/* PID hash table linkage. */
+    unsigned long policy;			// 该进程的调度策略, eg : SCHED_OTHER
+    unsigned long rt_priority;		// 实时调度策略优先级别
+    volatile long need_resched;		// 在返回用户态的时候如若设立该标志则会重调度
+	/* task_struct 之间的联系(所有进程都会在这三个结构内) */
+	// 1. 哈希表
 	struct task_struct *pidhash_next;
 	struct task_struct **pidhash_pprev;
+	// 2. 进程组
+	struct task_struct *p_opptr, *p_pptr, *p_cptr, *p_ysptr, *p_osptr;
+	// 3. 进程组成的链表
+	struct task_struct *next_task, *prev_task;
 };
 
 #ifndef INIT_TASK_SIZE
