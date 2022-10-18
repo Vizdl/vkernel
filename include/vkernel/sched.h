@@ -21,23 +21,23 @@ struct mm_struct {
 /*
  * cloning flags:
  */
-#define CSIGNAL		0x000000ff	/* signal mask to be sent at exit */
-#define CLONE_VM	0x00000100	/* set if VM shared between processes */
-#define CLONE_FS	0x00000200	/* set if fs info shared between processes */
-#define CLONE_FILES	0x00000400	/* set if open files shared between processes */
+#define CSIGNAL			0x000000ff	/* signal mask to be sent at exit */
+#define CLONE_VM		0x00000100	/* set if VM shared between processes */
+#define CLONE_FS		0x00000200	/* set if fs info shared between processes */
+#define CLONE_FILES		0x00000400	/* set if open files shared between processes */
 #define CLONE_SIGHAND	0x00000800	/* set if signal handlers and blocked signals shared */
-#define CLONE_PID	0x00001000	/* set if pid shared */
+#define CLONE_PID		0x00001000	/* set if pid shared */
 #define CLONE_PTRACE	0x00002000	/* set if we want to let tracing continue on the child too */
-#define CLONE_VFORK	0x00004000	/* set if the parent wants the child to wake it up on mm_release */
+#define CLONE_VFORK		0x00004000	/* set if the parent wants the child to wake it up on mm_release */
 #define CLONE_PARENT	0x00008000	/* set if we want to have the same parent as the cloner */
 #define CLONE_THREAD	0x00010000	/* Same thread group? */
 
 #define CLONE_SIGNAL	(CLONE_SIGHAND | CLONE_THREAD)
 
 // Ptrace flags
-#define PT_PTRACED	0x00000001
-#define PT_TRACESYS	0x00000002
-#define PT_DTRACE	0x00000004	/* delayed trace (used on m68k, i386) */
+#define PT_PTRACED		0x00000001
+#define PT_TRACESYS		0x00000002
+#define PT_DTRACE		0x00000004	/* delayed trace (used on m68k, i386) */
 #define PT_TRACESYSGOOD	0x00000008
 
 // 进程状态
@@ -141,17 +141,6 @@ extern void sched_init(void);
 extern int do_fork(unsigned long, unsigned long, struct pt_regs *, unsigned long);
 extern void FASTCALL(wake_up_process(struct task_struct * tsk));
 
-/**
- * @brief 判断进程是否在 runqueue 上
- * 
- * @param p 待判断的进程
- * @return int 判断结果
- */
-static inline int task_on_runqueue(struct task_struct *p)
-{
-	return (p->run_list.next != NULL);
-}
-
 // pid hashtable 相关
 int get_pid(unsigned long flags);
 void hash_pid(struct task_struct*);
@@ -161,6 +150,7 @@ struct task_struct *find_task_by_pid(int);
 void add_to_runqueue(struct task_struct *);
 void move_last_runqueue(struct task_struct * );
 void move_first_runqueue(struct task_struct *);
+int task_on_runqueue(struct task_struct *p);
 // goodness 相关
 int goodness(struct task_struct * p, int this_cpu, struct mm_struct *this_mm);
 int preemption_goodness(struct task_struct * prev, struct task_struct * p, int cpu);

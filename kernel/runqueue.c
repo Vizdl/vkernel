@@ -34,3 +34,14 @@ void move_first_runqueue(struct task_struct * p)
 	list_del(&p->run_list);
 	list_add(&p->run_list, &runqueue_head);
 }
+
+/**
+ * @brief 判断进程是否在 runqueue 上
+ * 
+ * @param p 待判断的进程
+ * @return int 判断结果
+ */
+int task_on_runqueue(struct task_struct *p)
+{
+	return (p->run_list.next != NULL);
+}
