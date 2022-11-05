@@ -61,8 +61,10 @@ asmlinkage int sys_clone(struct pt_regs regs)
 
 void __switch_to(struct task_struct *prev_p, struct task_struct *next_p)
 {
+    printk("__switch_to begin...\n");
 	struct thread_struct *next = &next_p->thread;
 	struct tss_struct *tss = init_tss + smp_processor_id();
     // 修改 tss 内容,这样如若从内核态回去才能回到正确的进程。
 	tss->esp0 = next->esp0;
+    printk("__switch_to end...\n");
 }

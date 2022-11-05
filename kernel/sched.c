@@ -1,3 +1,4 @@
+#include <asm/system.h>
 #include <vkernel/smp.h>
 #include <vkernel/init.h>
 #include <vkernel/sched.h>
@@ -55,4 +56,24 @@ inline void wake_up_process(struct task_struct * p)
 	reschedule_idle(p);
 out:
 	spin_unlock_irqrestore(&runqueue_lock, flags);
+}
+
+/**
+ * @brief 调度函数
+ * 
+ */
+asmlinkage void schedule(void)
+{
+	struct task_struct *prev, *next, *p;Q
+	struct list_head *tmp;
+	int this_cpu, c;
+	this_cpu = prev->processor;
+	list_for_each(tmp, &runqueue_head) {
+		p = list_entry(tmp, struct task_struct, run_list);
+		int weight = goodness(p, this_cpu, prev->active_mm);
+		c = weight, next = p;
+	}
+	switch_to(prev, next, prev);
+	printk("schedule ...");
+	return;
 }

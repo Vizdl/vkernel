@@ -1,6 +1,6 @@
 #include <vkernel/sched.h>
 
-static LIST_HEAD(runqueue_head);	// 就绪态进程运行队列
+LIST_HEAD(runqueue_head);	// 就绪态进程运行队列
 
 /**
  * @brief 将进程添加到 runqueue_head

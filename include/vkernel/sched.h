@@ -1,13 +1,15 @@
 #ifndef _LINUX_SCHED_H
 #define _LINUX_SCHED_H
 
-#include <asm/current.h>
 #include <asm/page.h>
 #include <asm/param.h>
 #include <asm/ptrace.h>
+#include <asm/current.h>
 #include <asm/pgtable.h>
 #include <asm/processor.h>
+#include <vkernel/list.h>
 #include <vkernel/kernel.h>
+#include <vkernel/linkage.h>
 #include <vkernel/spinlock.h>
 #include <vkernel/task_list.h>
 
@@ -135,11 +137,15 @@ extern struct mm_struct init_mm;
 extern rwlock_t tasklist_lock;
 extern int nr_running;
 extern int last_pid;
+extern struct list_head runqueue_head;
 
 extern void trap_init(void);
-extern void sched_init(void);
 extern int do_fork(unsigned long, unsigned long, struct pt_regs *, unsigned long);
 extern void FASTCALL(wake_up_process(struct task_struct * tsk));
+
+// shcedule
+extern void sched_init(void);
+asmlinkage void schedule(void);
 
 // pid hashtable 相关
 int get_pid(unsigned long flags);

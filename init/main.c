@@ -43,5 +43,6 @@ asmlinkage void __init start_kernel(void)
     // kmem_cache_sizes_init();
 	kernel_thread(init, NULL, CLONE_FS | CLONE_FILES | CLONE_SIGNAL);
     printk("end kernel...\n");
+    schedule();
     return;
 }
