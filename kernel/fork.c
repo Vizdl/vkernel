@@ -5,9 +5,18 @@
 #include <vkernel/threads.h>
 #include <vkernel/spinlock.h>
 
-int max_threads;
+int max_threads;	// 最大线程个数
 int nr_running;		// 就绪态的进程个数
 
+/**
+ * @brief 本质就是复制一个进程
+ * 
+ * @param clone_flags 克隆标志位
+ * @param stack_start 新进程的栈开始虚拟地址
+ * @param regs 寄存器组
+ * @param stack_size 栈的大小
+ * @return int 
+ */
 int do_fork(unsigned long clone_flags, unsigned long stack_start,
 	    struct pt_regs *regs, unsigned long stack_size)
 {

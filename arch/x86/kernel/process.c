@@ -8,8 +8,13 @@
 #include <vkernel/kernel.h>
 #include <vkernel/linkage.h>
 
-/*
- * Create a kernel thread
+/**
+ * @brief 创建内核线程
+ * 
+ * @param fn 内核线程函数
+ * @param arg 内核线程参数
+ * @param flags 控制 flags
+ * @return int 
  */
 int kernel_thread(int (*fn)(void *), void * arg, unsigned long flags)
 {
@@ -35,6 +40,12 @@ int kernel_thread(int (*fn)(void *), void * arg, unsigned long flags)
 	return retval;
 }
 
+/**
+ * @brief 克隆的系统调用函数接口
+ * 
+ * @param regs 寄存器组
+ * @return int 
+ */
 asmlinkage int sys_clone(struct pt_regs regs)
 {
 	unsigned long clone_flags;
