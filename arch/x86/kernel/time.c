@@ -2,6 +2,7 @@
 #include <asm/signal.h>
 #include <vkernel/init.h>
 #include <vkernel/types.h>
+#include <vkernel/sched.h>
 #include <vkernel/kernel.h>
 #include <vkernel/interrupt.h>
 
@@ -11,7 +12,8 @@
  */
 static inline void do_timer_interrupt(int irq, void *dev_id, struct pt_regs *regs)
 {
-    printk("do_timer_interrupt -> irq : %d, dev_id : %p, regs : %p\n", irq, dev_id, regs);
+    // printk("do_timer_interrupt -> irq : %d, dev_id : %p, regs : %p\n", irq, dev_id, regs);
+    do_timer(regs);
 }
 
 static void timer_interrupt(int irq, void *dev_id, struct pt_regs *regs)
