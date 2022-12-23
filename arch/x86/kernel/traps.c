@@ -66,7 +66,7 @@ void do_bounds(struct pt_regs *regs, unsigned long error_code)
 
 void do_invalid_op(struct pt_regs *regs, unsigned long error_code)
 {
-    printk("do_invalid_op ...\n");
+    // printk("do_invalid_op ...\n");
 }
 
 void do_device_not_available(struct pt_regs *regs, unsigned long error_code)

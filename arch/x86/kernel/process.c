@@ -8,8 +8,46 @@
 #include <vkernel/kernel.h>
 #include <vkernel/linkage.h>
 
+asmlinkage void ret_from_fork(void) __asm__("ret_from_fork");
+
+#define savesegment(seg,value) \
+	asm volatile("mov %%" #seg ",%0":"=m" (*(int *)&(value)))
+
 /**
- * @brief 创建内核线程
+ * @brief 拷贝 thread_struct
+ * 
+ * @param nr 
+ * @param clone_flags 
+ * @param esp 
+ * @param unused 
+ * @param p 
+ * @param regs 
+ * @return int 
+ */
+int copy_thread(int nr, unsigned long clone_flags, unsigned long esp,
+	unsigned long unused,
+	struct task_struct * p, struct pt_regs * regs)
+{
+	struct pt_regs * childregs;
+	// 获取待拷贝 task struct pt_regs 的指针位置
+	childregs = ((struct pt_regs *) (THREAD_SIZE + (unsigned long) p)) - 1;
+	struct_cpy(childregs, regs);
+	childregs->eax = 0;
+	childregs->esp = esp;
+
+	p->thread.esp = (unsigned long) childregs;
+	p->thread.esp0 = (unsigned long) (childregs+1);
+
+	p->thread.eip = (unsigned long) ret_from_fork;
+
+	savesegment(fs,p->thread.fs);
+	savesegment(gs,p->thread.gs);
+
+	return 0;
+}
+
+/**
+ * @brief 创建内核线程 : 本质是创建一个结构体放置在 rq 上等待调度
  * 
  * @param fn 内核线程函数
  * @param arg 内核线程参数
@@ -22,9 +60,9 @@ int kernel_thread(int (*fn)(void *), void * arg, unsigned long flags)
 
 	__asm__ __volatile__(
 		"movl %%esp,%%esi\n\t"
-		"int $0x80\n\t"		/* Linux/i386 system call */
+		"int $0x80\n\t"			/* Linux/i386 system call */
 		"cmpl %%esp,%%esi\n\t"	/* child or parent? */
-		"je 1f\n\t"		/* parent - jump */
+		"je 1f\n\t"				/* parent - jump */
 		/* 子节点调用 fn, 执行结束后调用 exit 退出线程 */
 		"movl %4,%%eax\n\t"
 		"pushl %%eax\n\t"		
@@ -59,12 +97,11 @@ asmlinkage int sys_clone(struct pt_regs regs)
 	return do_fork(clone_flags, newsp, &regs, 0);
 }
 
-void __switch_to(struct task_struct *prev_p, struct task_struct *next_p)
+void __fastcall __switch_to(struct task_struct *prev_p, struct task_struct *next_p)
 {
-    printk("__switch_to begin...\n");
-	struct thread_struct *next = &next_p->thread;
-	struct tss_struct *tss = init_tss + smp_processor_id();
+	// struct thread_struct *next = &next_p->thread;
+	// struct tss_struct *tss = init_tss + smp_processor_id();
+    printk("__switch_to, prev : %p,%d, next : %p,%d\n", prev_p, prev_p->pid, next_p, next_p->pid);
     // 修改 tss 内容,这样如若从内核态回去才能回到正确的进程。
-	tss->esp0 = next->esp0;
-    printk("__switch_to end...\n");
+	// tss->esp0 = next->esp0;
 }

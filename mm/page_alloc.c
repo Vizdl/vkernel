@@ -28,15 +28,13 @@ static char *zone_names[MAX_NR_ZONES] = { "DMA", "Normal", "HighMem" };
  */
 #define BAD_RANGE(zone,x) (((zone) != (x)->zone) || (((x)-mem_map) < (zone)->offset) || (((x)-mem_map) >= (zone)->offset+(zone)->size))
 
-static void FASTCALL(__free_pages_ok (struct page *page, unsigned long order));
-
 /**
  * @brief 释放 2^order 大小的物理页
  * 
  * @param page 要释放的第一个物理页
  * @param order 2^order
  */
-static void __free_pages_ok (struct page *page, unsigned long order)
+static void __fastcall __free_pages_ok (struct page *page, unsigned long order)
 {
 	unsigned long index, page_idx, mask, flags;
 	free_area_t *area;
@@ -164,8 +162,7 @@ static inline struct page * expand (zone_t *zone, struct page *page,
  * @param order 申请 2^order 个 struct page(物理页)
  * @return 申请的第一个 page
  */
-static FASTCALL(struct page * rmqueue(zone_t *zone, unsigned long order));
-static struct page * rmqueue(zone_t *zone, unsigned long order)
+static struct page * __fastcall rmqueue(zone_t *zone, unsigned long order)
 {
 	free_area_t * area = zone->free_area + order;
 	unsigned long curr_order = order;
@@ -213,7 +210,7 @@ static struct page * rmqueue(zone_t *zone, unsigned long order)
  * @param page 要释放的第一个物理页
  * @param order 2^order
  */
-void __free_pages(struct page *page, unsigned long order)
+void __fastcall __free_pages(struct page *page, unsigned long order)
 {
 	// printk("__free_pages ...\n");
 	if (!PageReserved(page) && put_page_testzero(page))
@@ -226,7 +223,7 @@ void __free_pages(struct page *page, unsigned long order)
  * @param addr 要释放的物理页的虚拟地址
  * @param order 2^order
  */
-void free_pages(unsigned long addr, unsigned long order)
+void __fastcall free_pages(unsigned long addr, unsigned long order)
 {
 	struct page *fpage;
 
@@ -291,7 +288,7 @@ static inline struct page * alloc_pages(int gfp_mask, unsigned long order)
  * @param order 2^order 个物理页
  * @return unsigned 虚拟地址
  */
-unsigned long __get_free_pages(int gfp_mask, unsigned long order)
+unsigned long __fastcall __get_free_pages(int gfp_mask, unsigned long order)
 {
 	struct page * page;
 

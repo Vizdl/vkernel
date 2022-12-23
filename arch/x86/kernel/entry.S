@@ -193,6 +193,11 @@ ENTRY(spurious_interrupt_bug)
 	pushl $ SYMBOL_NAME(do_spurious_interrupt_bug)
 	jmp error_code
 
+ENTRY(ret_from_fork)
+	pushl %ebx
+	call SYMBOL_NAME(schedule_tail)
+	addl $4, %esp
+	jmp	ret_from_sys_call
 
 ENTRY(system_call)
 	pushl %eax			# save orig_eax

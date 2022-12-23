@@ -26,6 +26,13 @@ extern void print_str(char *str);
 #define va_arg(ap, t) *((t*)(ap += 4))
 #define va_end(ap) ap = NULL
 
-#define FASTCALL(x)	x 
+#ifdef __i386__
+// 使用寄存器调用栈的方式 : eax edx ebx
+#define FASTCALL(x)	x __attribute__((regparm(3)))
+#define __fastcall __attribute__((regparm(3)))
+#else
+#define FASTCALL(x)	x
+#define __fastcall
+#endif
 
 #endif /* __KERNEL_H */

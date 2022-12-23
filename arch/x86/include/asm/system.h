@@ -2,27 +2,36 @@
 #define __ASM_SYSTEM_H
 
 #include <vkernel/config.h>
+#include <vkernel/kernel.h>
 
 #ifdef __KERNEL__
 
 struct task_struct;	/* one of the stranger aspects of C forward declarations.. */
-extern void __switch_to(struct task_struct *prev, struct task_struct *next);
+extern void FASTCALL(__switch_to(struct task_struct *prev, struct task_struct *next));
 
-#define switch_to(prev,next,last) do {					\
-	asm volatile("pushl %%esi\n\t"						\
-		     "pushl %%edi\n\t"							\
-		     "pushl %%ebp\n\t"							\
-		     "movl %%esp,%0\n\t"	/* save ESP */		\
-		     "movl %3,%%esp\n\t"	/* restore ESP */	\
-		     "movl $1f,%1\n\t"		/* save EIP */		\
-		     "pushl %4\n\t"			/* restore EIP */	\
+// 
+// prev next 是怎么压入 __switch_to 函数栈内的?
+// 通过 regparm(FASTCALL) 调用方式 将 eax edx ebx 分别设为 prev next prev 传参进去的
+//
+#define switch_to(prev,next,last) do {	\
+	asm volatile("pushl %%esi\n\t"		\
+		     "pushl %%edi\n\t"			\
+		     "pushl %%ebp\n\t"			\
+		     "movl %%esp,%0\n\t"	/* prev->thread.esp = esp */		\
+		     "movl %3,%%esp\n\t"	/* esp = next->thread.esp */		\
+		     "movl $1f,%1\n\t"		/* prev->thread.eip = label 1(1:) */		\
+			 /* 将 next->thread.eip 压入 next 内核栈内,模拟之前调用过 */	\
+			 /* 如若第一次被调度,则会跳到 ret_from_fork, 否则跳转到 label 1(1:) */	\
+		     "pushl %4\n\t"										\
 		     "jmp __switch_to\n"						\
 		     "1:\t"										\
 		     "popl %%ebp\n\t"							\
 		     "popl %%edi\n\t"							\
 		     "popl %%esi\n\t"							\
+			 /* 输出参数,这三个参数会被修改 */ \
 		     :"=m" (prev->thread.esp),"=m" (prev->thread.eip),	\
 		      "=b" (last)										\
+			 /* 输入参数, 将 eax edx ebx 分别设为 prev next prev */ \
 		     :"m" (next->thread.esp),"m" (next->thread.eip),	\
 		      "a" (prev), "d" (next),							\
 		      "b" (prev));										\

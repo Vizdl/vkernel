@@ -41,7 +41,7 @@ static void reschedule_idle(struct task_struct * p)
  * 
  * @param p 待设为就绪态的进程
  */
-inline void wake_up_process(struct task_struct * p)
+inline void __fastcall wake_up_process(struct task_struct * p)
 {
 	unsigned long flags;
 
@@ -58,22 +58,35 @@ out:
 	spin_unlock_irqrestore(&runqueue_lock, flags);
 }
 
+static inline void __schedule_tail(struct task_struct *prev)
+{
+	prev->policy &= ~SCHED_YIELD;
+}
+
+void schedule_tail(struct task_struct *prev)
+{
+	printk("schedule_tail...\n");
+	__schedule_tail(prev);
+}
+
 /**
  * @brief 调度函数
  * 
  */
 asmlinkage void schedule(void)
 {
-	struct task_struct *prev, *next, *p;Q
+	struct task_struct *prev, *next, *p;
 	struct list_head *tmp;
 	int this_cpu, c;
+	prev = current;
 	this_cpu = prev->processor;
 	list_for_each(tmp, &runqueue_head) {
 		p = list_entry(tmp, struct task_struct, run_list);
 		int weight = goodness(p, this_cpu, prev->active_mm);
 		c = weight, next = p;
 	}
+	printk("prev : %p,%d, next : %p,%d\n", prev, prev->pid, next, next->pid);
 	switch_to(prev, next, prev);
-	printk("schedule ...");
+	printk("schedule end ...");
 	return;
 }

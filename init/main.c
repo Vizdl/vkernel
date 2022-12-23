@@ -18,6 +18,11 @@ void __init show_init_task(void)
     return;
 }
 
+void __init int_test(void)
+{
+    __asm__ __volatile__ ("int $32");
+}
+
 static int init(void * unused)
 {
     printk("init...\n");
@@ -31,9 +36,8 @@ asmlinkage void __init start_kernel(void)
     setup_arch();
     trap_init();
     init_IRQ();
-    // for test irq
-    // __asm__ __volatile__ ("int $32");
-    show_init_task();
+    // int_test();
+    // show_init_task();
     // time_init();
     sched_init();
     // kmem_cache_init();
@@ -42,7 +46,7 @@ asmlinkage void __init start_kernel(void)
     fork_init(mempages);
     // kmem_cache_sizes_init();
 	kernel_thread(init, NULL, CLONE_FS | CLONE_FILES | CLONE_SIGNAL);
-    printk("end kernel...\n");
     schedule();
+    printk("end kernel...\n");
     return;
 }

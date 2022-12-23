@@ -33,10 +33,14 @@ int do_fork(unsigned long clone_flags, unsigned long stack_start,
 	p = alloc_task_struct();
 	if (!p)
 		goto fork_out;
-
+	// 2. 初始化 task
 	p->state = TASK_UNINTERRUPTIBLE;
 	p->run_list.next = NULL;
 	p->run_list.prev = NULL;
+	
+	retval = copy_thread(0, clone_flags, stack_start, stack_size, p, regs);
+	if (retval)
+		goto fork_out;
 
     p->pid = get_pid(clone_flags);
     printk("do_fork, pid = %d...\n", p->pid);
@@ -52,7 +56,7 @@ int do_fork(unsigned long clone_flags, unsigned long stack_start,
 	SET_LINKS(p);
 	// 2.3 根据 pid 加入到 pid 哈希表里
 	hash_pid(p);
-
+	// 3. 唤醒进程
 	wake_up_process(p);
 fork_out:
 	return retval;

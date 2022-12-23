@@ -143,6 +143,13 @@ extern void trap_init(void);
 extern int do_fork(unsigned long, unsigned long, struct pt_regs *, unsigned long);
 extern void FASTCALL(wake_up_process(struct task_struct * tsk));
 
+// timer
+void do_timer(struct pt_regs *regs);
+
+
+// copy task
+extern int  copy_thread(int, unsigned long, unsigned long, unsigned long, struct task_struct *, struct pt_regs *);
+
 // shcedule
 extern void sched_init(void);
 asmlinkage void schedule(void);
