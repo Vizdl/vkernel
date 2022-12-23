@@ -25,7 +25,7 @@ void __init int_test(void)
 
 static int init(void * unused)
 {
-    printk("init...\n");
+    printk("init : %p\n", unused);
     return 0;
 }
 

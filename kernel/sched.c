@@ -82,11 +82,15 @@ asmlinkage void schedule(void)
 	this_cpu = prev->processor;
 	list_for_each(tmp, &runqueue_head) {
 		p = list_entry(tmp, struct task_struct, run_list);
-		int weight = goodness(p, this_cpu, prev->active_mm);
-		c = weight, next = p;
+		if (p != prev) {
+			int weight = goodness(p, this_cpu, prev->active_mm);
+			c = weight, next = p;
+		}
 	}
-	printk("prev : %p,%d, next : %p,%d\n", prev, prev->pid, next, next->pid);
+	// 将 prev 继续挂到 rq 上,等待下次调度。
+	wake_up_process(prev);
+	printk("schedule prev : %p,%d, next : %p,%d\n", prev, prev->pid, next, next->pid);
 	switch_to(prev, next, prev);
-	printk("schedule end ...");
+	printk("schedule end ...\n");
 	return;
 }
