@@ -40,7 +40,7 @@ int do_fork(unsigned long clone_flags, unsigned long stack_start,
 	
 	retval = copy_thread(0, clone_flags, stack_start, stack_size, p, regs);
 	if (retval)
-		goto fork_out;
+		goto bad_fork_free;
 
     p->pid = get_pid(clone_flags);
     printk("do_fork, pid = %d...\n", p->pid);
@@ -60,6 +60,9 @@ int do_fork(unsigned long clone_flags, unsigned long stack_start,
 	wake_up_process(p);
 fork_out:
 	return retval;
+bad_fork_free:
+	free_task_struct(p);
+	goto fork_out;
 }
 
 void __init fork_init(unsigned long mempages)
