@@ -66,7 +66,7 @@ void do_bounds(struct pt_regs *regs, unsigned long error_code)
 
 void do_invalid_op(struct pt_regs *regs, unsigned long error_code)
 {
-    // printk("do_invalid_op ...\n");
+    printk("do_invalid_op ...\n");
 }
 
 void do_device_not_available(struct pt_regs *regs, unsigned long error_code)
@@ -139,7 +139,6 @@ void do_machine_check(struct pt_regs *regs, unsigned long error_code)
  * 
  */
 void __init trap_init(void){
-    printk("trap init ...\n");
 	set_trap_gate(0,&divide_error);
 	set_trap_gate(1,&debug);
 	set_intr_gate(2,&nmi);

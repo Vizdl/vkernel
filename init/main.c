@@ -32,7 +32,6 @@ static int init(void * unused)
 asmlinkage void __init start_kernel(void)
 {
 	unsigned long mempages;
-    printk("start kernel...\n");
     setup_arch();
     trap_init();
     init_IRQ();

@@ -104,7 +104,6 @@ void __init setup_arch(void)
 	int i;
 	unsigned long bootmap_size;
 	unsigned long start_pfn, max_pfn, max_low_pfn;
-    printk("setup arch...\n");
 	setup_memory_region();
     start_pfn = PFN_UP((unsigned long)__pa(&_end));
     /*
