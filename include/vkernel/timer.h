@@ -6,9 +6,9 @@
 
 struct timer_list {
 	struct list_head list;
-	unsigned long expires;
-	unsigned long data;
-	void (*function)(unsigned long);
+	unsigned long expires;  // 期待定时器发生的时间
+	unsigned long data;     // 定时器回调上下文
+	void (*function)(unsigned long); // 定时器回调函数
 };
 
 /**
