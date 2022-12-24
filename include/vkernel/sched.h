@@ -76,7 +76,7 @@ struct mm_struct {
 struct task_struct {
 	volatile long state;			// 进程状态 : -1 unrunnable, 0 runnable, >0 stopped
 	int processor;
-	struct thread_struct thread;	/* CPU-specific state of this task */
+	struct thread_struct thread;	// 线程上下文
 	struct mm_struct *mm;
 	struct mm_struct *active_mm;
 	struct list_head run_list;		// 就绪态时该链表设到
