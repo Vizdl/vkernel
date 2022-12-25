@@ -18,6 +18,14 @@ static spinlock_t softirq_mask_lock = SPIN_LOCK_UNLOCKED;
 // 全局 tasklet 队列, 二维, 第一维是 cpu, 第二维是 tasklet
 struct tasklet_head tasklet_vec[NR_CPUS] __cacheline_aligned;
 
+// bh 处理函数列表
+static void (*bh_base[32])(void);
+spinlock_t global_bh_lock = SPIN_LOCK_UNLOCKED;
+// 注册的 bh tasklet 链表
+struct tasklet_struct bh_task_vec[32];
+// bh tasklet 待执行链表
+struct tasklet_head tasklet_hi_vec[NR_CPUS] __cacheline_aligned;
+
 /**
  * @brief 注册软中断
  * 
@@ -177,11 +185,95 @@ static void tasklet_action(struct softirq_action *a)
 }
 
 
+void init_bh(int nr, void (*routine)(void))
+{
+	bh_base[nr] = routine;
+	// mb();
+}
+
+void remove_bh(int nr)
+{
+	tasklet_kill(bh_task_vec+nr);
+	bh_base[nr] = NULL;
+}
+
+/**
+ * @brief 该函数被设置为 tasklet 回调函数
+ * 
+ * @param nr 回调时的 bh 号
+ */
+static void bh_action(unsigned long nr)
+{
+	int cpu = smp_processor_id();
+
+	if (!spin_trylock(&global_bh_lock))
+		goto resched;
+
+	if (!hardirq_trylock(cpu))
+		goto resched_unlock;
+
+	if (bh_base[nr])
+		bh_base[nr]();
+
+	hardirq_endlock(cpu);
+	spin_unlock(&global_bh_lock);
+	return;
+
+resched_unlock:
+	spin_unlock(&global_bh_lock);
+resched:
+	mark_bh(nr);
+}
+
+/**
+ * @brief bh tasklet 中断回调函数
+ * 
+ * @param a 中断回调上下文
+ */
+static void tasklet_hi_action(struct softirq_action *a)
+{
+	int cpu = smp_processor_id();
+	struct tasklet_struct *list;
+	// 1. 取出待执行的 tasklet
+	local_irq_disable();
+	list = tasklet_hi_vec[cpu].list;
+	tasklet_hi_vec[cpu].list = NULL;
+	local_irq_enable();
+	// 2. 遍历执行 tasklet
+	while (list != NULL) {
+		struct tasklet_struct *t = list;
+
+		list = list->next;
+
+		if (tasklet_trylock(t)) {
+			if (atomic_read(&t->count) == 0) {
+				clear_bit(TASKLET_STATE_SCHED, &t->state);
+
+				t->func(t->data);
+				tasklet_unlock(t);
+				continue;
+			}
+			tasklet_unlock(t);
+		}
+		local_irq_disable();
+		t->next = tasklet_hi_vec[cpu].list;
+		tasklet_hi_vec[cpu].list = t;
+		__cpu_raise_softirq(cpu, HI_SOFTIRQ);
+		local_irq_enable();
+	}
+}
+
 /**
  * @brief 初始化软中断
  * 
  */
 void __init softirq_init(void)
 {
+	int i;
+	// 初始化 bh tasklet
+	for (i=0; i<32; i++)
+		tasklet_init(bh_task_vec+i, bh_action, i);
+
 	open_softirq(TASKLET_SOFTIRQ, tasklet_action, NULL);
+	open_softirq(HI_SOFTIRQ, tasklet_hi_action, NULL);
 }

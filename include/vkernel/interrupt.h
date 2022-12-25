@@ -37,11 +37,6 @@ struct softirq_action
 	void	*data;
 };
 
-static inline void __cpu_raise_softirq(int cpu, int nr)
-{
-	softirq_active(cpu) |= (1<<nr);
-}
-
 struct tasklet_struct
 {
 	struct tasklet_struct *next;
@@ -56,14 +51,23 @@ struct tasklet_head
 	struct tasklet_struct *list;	// tasklet_struct 列表
 } __attribute__ ((__aligned__(SMP_CACHE_BYTES)));
 
-
+// tasklet
 extern struct tasklet_head tasklet_vec[NR_CPUS];
 
+// bh
+extern struct tasklet_head tasklet_hi_vec[NR_CPUS];
+extern struct tasklet_struct bh_task_vec[];
+extern spinlock_t global_bh_lock;
 
 // tasklet 操作宏
 #define tasklet_trylock(t) 1
 #define tasklet_unlock_wait(t) do { } while (0)
 #define tasklet_unlock(t) do { } while (0)
+
+static inline void __cpu_raise_softirq(int cpu, int nr)
+{
+	softirq_active(cpu) |= (1<<nr);
+}
 
 /**
  * @brief 初始化指定 tasklet
@@ -125,6 +129,50 @@ static inline void tasklet_disable(struct tasklet_struct *t)
 static inline void tasklet_enable(struct tasklet_struct *t)
 {
 	atomic_dec(&t->count);
+}
+
+/**
+ * @brief 添加指定 tasklet 到待执行链表中
+ * 
+ * @param t 待执行 tasklet
+ */
+static inline void tasklet_hi_schedule(struct tasklet_struct *t)
+{
+	if (!test_and_set_bit(TASKLET_STATE_SCHED, &t->state)) {
+		int cpu = smp_processor_id();
+		unsigned long flags;
+
+		local_irq_save(flags);
+		t->next = tasklet_hi_vec[cpu].list;
+		tasklet_hi_vec[cpu].list = t;
+		__cpu_raise_softirq(cpu, HI_SOFTIRQ);
+		local_irq_restore(flags);
+	}
+}
+
+/**
+ * @brief 添加 bh
+ * 
+ * @param nr bh 号
+ * @param routine 回调函数
+ */
+extern void init_bh(int nr, void (*routine)(void));
+
+/**
+ * @brief 移除 bh
+ * 
+ * @param nr bh 号
+ */
+extern void remove_bh(int nr);
+
+/**
+ * @brief 标记指定 bh 待执行
+ * 
+ * @param nr bh 号
+ */
+static inline void mark_bh(int nr)
+{
+	tasklet_hi_schedule(bh_task_vec+nr);
 }
 
 #endif
