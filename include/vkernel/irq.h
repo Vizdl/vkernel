@@ -2,8 +2,8 @@
 #define __irq_h
 
 #include <asm/irq.h>
-#include <asm/ptrace.h>
 #include <vkernel/cache.h>
+#include <vkernel/ptrace.h>
 #include <vkernel/spinlock.h>
 
 #define NR_IRQS 224

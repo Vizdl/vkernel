@@ -20,4 +20,9 @@ struct pt_regs {
     long esp;
     int  xss;
 };
+
+#ifdef __KERNEL__
+#define user_mode(regs) ((VM_MASK & (regs)->eflags) || (3 & (regs)->xcs))
+#endif
+
 #endif

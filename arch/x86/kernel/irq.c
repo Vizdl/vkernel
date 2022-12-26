@@ -1,9 +1,9 @@
 #include <asm/errno.h>
-#include <asm/ptrace.h>
 #include <asm/signal.h>
 #include <vkernel/irq.h>
 #include <vkernel/smp.h>
 #include <vkernel/slab.h>
+#include <vkernel/ptrace.h>
 #include <vkernel/kernel.h>
 #include <vkernel/stddef.h>
 #include <vkernel/linkage.h>

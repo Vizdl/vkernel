@@ -3,11 +3,11 @@
 
 #include <asm/page.h>
 #include <asm/param.h>
-#include <asm/ptrace.h>
 #include <asm/current.h>
 #include <asm/pgtable.h>
 #include <asm/processor.h>
 #include <vkernel/list.h>
+#include <vkernel/ptrace.h>
 #include <vkernel/kernel.h>
 #include <vkernel/linkage.h>
 #include <vkernel/spinlock.h>
@@ -76,11 +76,12 @@ struct mm_struct {
 struct task_struct {
 	volatile long state;			// 进程状态 : -1 unrunnable, 0 runnable, >0 stopped
 	int processor;
-	struct thread_struct thread;	// 线程上下文
 	struct mm_struct *mm;
 	struct mm_struct *active_mm;
 	struct list_head run_list;		// 就绪态时该链表设到
     unsigned long ptrace;
+	/* 上下文切换 */
+	struct thread_struct thread;	// 线程上下文
 	/* 进程号进程组相关 */
 	pid_t pid;						// 进程ID
 	pid_t session;					// 进程会话

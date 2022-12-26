@@ -1,10 +1,1 @@
-obj-y += printk.o
-obj-y += debug.o
-obj-y += softirq.o
-obj-y += sched.o
-obj-y += fork.o
-obj-y += exit.o
-obj-y += pid.o
-obj-y += pidhash.o
-obj-y += runqueue.o
-obj-y += goodness.o
+obj-y += printk.o debug.o softirq.o sched.o fork.o exit.o pid.o pidhash.o runqueue.o goodness.o timer.o

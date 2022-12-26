@@ -1,4 +1,6 @@
+#include <asm/ptrace.h>
 #include <vkernel/timer.h>
+#include <vkernel/sched.h>
 #include <vkernel/kernel.h>
 #include <vkernel/spinlock.h>
 #include <vkernel/interrupt.h>
@@ -240,6 +242,18 @@ void timer_bh(void)
 	run_timer_list();
 }
 
+void update_process_times(int user_tick)
+{
+	struct task_struct *p = current;
+	// 如若不是 0 号进程
+	if (p->pid) {
+		if (--p->counter <= 0) {
+			p->counter = 0;
+			p->need_resched = 1;
+		}
+	}
+}
+
 /**
  * @brief 硬件中断回调函数
  * 
@@ -248,6 +262,8 @@ void timer_bh(void)
 void do_timer(struct pt_regs *regs)
 {
 	(*(unsigned long *)&jiffies)++;
+
+	update_process_times(user_mode(regs));
 	// 标记定时器 bh 发生,等待软中断处理。
 	mark_bh(TIMER_BH);
 }
