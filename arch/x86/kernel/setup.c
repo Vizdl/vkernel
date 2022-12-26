@@ -26,13 +26,11 @@ extern void paging_init(void);
 #define MAXMEM		(unsigned long)(-PAGE_OFFSET-VMALLOC_RESERVE)
 #define MAXMEM_PFN	PFN_DOWN(MAXMEM)
 
-static void __init print_memory_map(char *who)
+static void __init __unused print_memory_map(char *who)
 {
 	int i;
 
 	for (i = 0; i < e820.nr_map; i++) {
-		// printk(" %s: %016Lx @ %016Lx ", who,
-		// 	e820.map[i].size, e820.map[i].addr);
 		printk(" %s: base_addr = 0x%x%x, length =  0x%x%x ", who,
 			(unsigned)(e820.map[i].addr >> 32), (unsigned)(e820.map[i].addr & 0xffffffff),
 			(unsigned)(e820.map[i].size >> 32), (unsigned)(e820.map[i].size & 0xffffffff));
@@ -76,14 +74,7 @@ static int __init copy_e820_map_from_multiboot(void)
     struct multiboot_tag *tag = multiboot_memory_map;
     for (mmap = ((struct multiboot_tag_mmap *)tag)->entries;
         (multiboot_uint8_t *)mmap < (multiboot_uint8_t *)tag + tag->size;
-        mmap = (multiboot_memory_map_t *)((unsigned long)mmap + ((struct multiboot_tag_mmap *)tag)->entry_size)){
-            // printk(" base_addr = 0x%x%x,"
-            //     " length = 0x%x%x, type = 0x%x\n",
-            //     (unsigned)(mmap->addr >> 32),
-            //     (unsigned)(mmap->addr & 0xffffffff),
-            //     (unsigned)(mmap->len >> 32),
-            //     (unsigned)(mmap->len & 0xffffffff),
-            //     (unsigned)mmap->type);        
+        mmap = (multiboot_memory_map_t *)((unsigned long)mmap + ((struct multiboot_tag_mmap *)tag)->entry_size)){       
 		    add_memory_region(mmap->addr, mmap->len, mmap->type);
         }
     return 0;
@@ -91,10 +82,10 @@ static int __init copy_e820_map_from_multiboot(void)
 
 void __init setup_memory_region(void)
 {
-	char *who = "multiboot";
+	// char *who = "multiboot";
 	if (copy_e820_map_from_multiboot())
         BUG();
-	printk("BIOS-provided physical RAM map:\n");
+	// printk("BIOS-provided physical RAM map:\n");
 	// print_memory_map(who);
 } /* setup_memory_region */
 

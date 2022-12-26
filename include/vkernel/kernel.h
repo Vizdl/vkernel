@@ -37,4 +37,6 @@ extern void print_str(char *str);
 #define __fastcall
 #endif
 
+#define __unused __attribute__((unused))
+
 #endif /* __KERNEL_H */
