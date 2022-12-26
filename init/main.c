@@ -1,10 +1,11 @@
+#include <asm/delay.h>
 #include <vkernel/mm.h>
 #include <vkernel/init.h>
 #include <vkernel/slab.h>
 #include <vkernel/sched.h>
 #include <vkernel/kernel.h>
 #include <vkernel/linkage.h>
-#include <vkernel/sched.h>
+#include <vkernel/interrupt.h>
 
 extern void setup_arch(void);
 extern void init_IRQ(void);
@@ -25,7 +26,17 @@ void __init int_test(void)
 
 static int init(void * unused)
 {
+    int count = 0;
     printk("init : %p\n", unused);
+    while (1) {
+        if (count > 2000) {
+            printk("init running...\n");
+            count = 0;
+            continue;
+        }
+        count++;
+        udelay(100);
+    };
     return 0;
 }
 
@@ -37,8 +48,9 @@ asmlinkage void __init start_kernel(void)
     init_IRQ();
     // int_test();
     // show_init_task();
-    // time_init();
     sched_init();
+    time_init();
+	softirq_init();
     // kmem_cache_init();
     mem_init();
     mempages = num_physpages;

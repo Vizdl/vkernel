@@ -26,13 +26,6 @@ struct tasklet_struct bh_task_vec[32];
 // bh tasklet 待执行链表
 struct tasklet_head tasklet_hi_vec[NR_CPUS] __cacheline_aligned;
 
-/**
- * @brief 注册软中断
- * 
- * @param nr 软中断向量号
- * @param action 软中断处理结构
- * @param data 上下文信息
- */
 void open_softirq(int nr, void (*action)(struct softirq_action*), void *data)
 {
 	unsigned long flags;
@@ -48,17 +41,11 @@ void open_softirq(int nr, void (*action)(struct softirq_action*), void *data)
 	spin_unlock_irqrestore(&softirq_mask_lock, flags);
 }
 
-/**
- * @brief 处理软中断
- * 
- */
 asmlinkage void do_softirq(void)
 {
 	// 1. 获取当前 CPU
 	int cpu = smp_processor_id();
 	__u32 active, mask;
-
-	printk("do_softirq...\n");
 	
 	// 2. 如若在中断上下文中则返回
 	if (in_interrupt())
@@ -104,13 +91,6 @@ retry:
 	goto restart;
 }
 
-/**
- * @brief 初始化 tasklet
- * 
- * @param t 待初始化的 tasklet
- * @param func 回调函数
- * @param data 回调函数参数
- */
 void tasklet_init(struct tasklet_struct *t,
 		  void (*func)(unsigned long), unsigned long data)
 {
@@ -120,11 +100,6 @@ void tasklet_init(struct tasklet_struct *t,
 	atomic_set(&t->count, 0);
 }
 
-/**
- * @brief 停止 tasklet(其实本质是加速执行)
- * 
- * @param t 待停止的 tasklet
- */
 void tasklet_kill(struct tasklet_struct *t)
 {
 	if (in_interrupt())
@@ -187,6 +162,7 @@ static void tasklet_action(struct softirq_action *a)
 
 void init_bh(int nr, void (*routine)(void))
 {
+	printk("init_bh : %d\n", nr);
 	bh_base[nr] = routine;
 	// mb();
 }
@@ -205,7 +181,6 @@ void remove_bh(int nr)
 static void bh_action(unsigned long nr)
 {
 	int cpu = smp_processor_id();
-
 	if (!spin_trylock(&global_bh_lock))
 		goto resched;
 
@@ -263,10 +238,6 @@ static void tasklet_hi_action(struct softirq_action *a)
 	}
 }
 
-/**
- * @brief 初始化软中断
- * 
- */
 void __init softirq_init(void)
 {
 	int i;

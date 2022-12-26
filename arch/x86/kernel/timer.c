@@ -230,13 +230,24 @@ int mod_timer(struct timer_list *timer, unsigned long expires)
 	return ret;
 }
 
+/**
+ * @brief bh 回调函数
+ * 
+ */
 void timer_bh(void)
 {
+    printk("timer_bh...\n");
 	run_timer_list();
 }
 
+/**
+ * @brief 硬件中断回调函数
+ * 
+ * @param regs 寄存器组
+ */
 void do_timer(struct pt_regs *regs)
 {
-    printk("do_timer...\n");
 	(*(unsigned long *)&jiffies)++;
+	// 标记定时器 bh 发生,等待软中断处理。
+	mark_bh(TIMER_BH);
 }

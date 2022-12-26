@@ -6,7 +6,12 @@
 #include <asm/softirq.h>
 #include <asm/hardirq.h>
 #include <vkernel/threads.h>
+#include <vkernel/linkage.h>
 #include <vkernel/spinlock.h>
+
+enum {
+	TIMER_BH = 0
+};
 
 enum
 {
@@ -64,6 +69,33 @@ extern spinlock_t global_bh_lock;
 #define tasklet_unlock_wait(t) do { } while (0)
 #define tasklet_unlock(t) do { } while (0)
 
+/**
+ * @brief 初始化软中断
+ * 
+ */
+extern void softirq_init(void);
+
+/**
+ * @brief 处理软中断
+ * 
+ */
+asmlinkage void do_softirq(void);
+
+/**
+ * @brief 注册软中断
+ * 
+ * @param nr 软中断向量号
+ * @param action 软中断处理结构
+ * @param data 上下文信息
+ */
+extern void open_softirq(int nr, void (*action)(struct softirq_action*), void *data);
+
+/**
+ * @brief 外部唤醒软中断
+ * 
+ * @param cpu 
+ * @param nr 
+ */
 static inline void __cpu_raise_softirq(int cpu, int nr)
 {
 	softirq_active(cpu) |= (1<<nr);
@@ -98,6 +130,11 @@ static inline void tasklet_schedule(struct tasklet_struct *t)
 	}
 }
 
+/**
+ * @brief 停止 tasklet(其实本质是加速执行)
+ * 
+ * @param t 待停止的 tasklet
+ */
 extern void tasklet_kill(struct tasklet_struct *t);
 
 /**

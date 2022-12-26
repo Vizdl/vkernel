@@ -252,15 +252,12 @@ int handle_IRQ_event(unsigned int irq, struct pt_regs * regs, struct irqaction *
 	// 1. 进入硬中断处理流程
 	irq_enter(cpu, irq);
 
-	printk("handle_IRQ_event irq %d\n", irq);
-
 	status = 1;
 	// 2. 判断是否需要屏蔽硬中断
 	if (!(action->flags & SA_INTERRUPT))
 		__sti();
 	// 3. 遍历 action 链表,执行所有处理函数。
 	do {
-		printk("int %d -> do irq action %s\n", irq, action->name);
 		status |= action->flags;
 		action->handler(irq, action->dev_id, regs);
 		action = action->next;
@@ -286,8 +283,9 @@ asmlinkage unsigned int do_IRQ(struct pt_regs regs)
 	irq_desc_t *desc = irq_desc + irq;
 	struct irqaction * action;
 	unsigned int status;
+	int cpu = smp_processor_id();
 
-	printk("do_IRQ : %d\n", irq);
+	// printk("do_IRQ : %d:%d\n", cpu, irq);
 
 	spin_lock(&desc->lock);
 	// 2. 回复硬中断 ack
@@ -321,5 +319,8 @@ asmlinkage unsigned int do_IRQ(struct pt_regs regs)
 out:
 	// 6. 回复硬中断处理结束
 	desc->handler->end(irq);
-    return 0;
+	// 7. 中断退出的最后时刻执行软中断
+	if (softirq_active(cpu) & softirq_mask(cpu))
+		do_softirq();
+    return 1;
 }

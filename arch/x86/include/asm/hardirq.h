@@ -21,7 +21,7 @@ typedef struct {
 // 进入硬中断处理流程
 #define irq_enter(cpu, irq) do { local_irq_count(cpu)++; } while(0)
 // 退出硬中断处理流程
-#define irq_exit(cpu, irq) do { local_irq_count(cpu)++; } while(0)
+#define irq_exit(cpu, irq) do { local_irq_count(cpu)--; } while(0)
 
 #define hardirq_trylock(cpu)	(local_irq_count(cpu) == 0)
 #define hardirq_endlock(cpu)	do { } while (0)

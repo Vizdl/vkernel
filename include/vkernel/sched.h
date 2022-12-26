@@ -81,7 +81,6 @@ struct task_struct {
 	struct mm_struct *active_mm;
 	struct list_head run_list;		// 就绪态时该链表设到
     unsigned long ptrace;
-    long counter;
 	/* 进程号进程组相关 */
 	pid_t pid;						// 进程ID
 	pid_t session;					// 进程会话
@@ -89,6 +88,7 @@ struct task_struct {
 	/* 调度有关属性 */
     long nice;						// 调度优先值
     unsigned long policy;			// 该进程的调度策略, eg : SCHED_OTHER
+    long counter;					// 如若 counter <= 0 则重调度
     unsigned long rt_priority;		// 实时调度策略优先级别
     volatile long need_resched;		// 在返回用户态的时候如若设立该标志则会重调度
 	/* task_struct 之间的联系(所有进程都会在这三个结构内) */

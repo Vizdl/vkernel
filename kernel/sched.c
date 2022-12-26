@@ -2,12 +2,16 @@
 #include <vkernel/smp.h>
 #include <vkernel/init.h>
 #include <vkernel/sched.h>
-#include <vkernel/kernel.h>
 #include <vkernel/cache.h>
+#include <vkernel/kernel.h>
 #include <vkernel/spinlock.h>
+#include <vkernel/interrupt.h>
 
 spinlock_t runqueue_lock __cacheline_aligned = SPIN_LOCK_UNLOCKED;  /* inner */
 rwlock_t tasklist_lock __cacheline_aligned = RW_LOCK_UNLOCKED;	/* outer */
+
+extern void timer_bh(void);
+extern void init_timervecs (void);
 
 void __init sched_init(void)
 {
@@ -23,6 +27,12 @@ void __init sched_init(void)
 
 	for(nr = 0; nr < PIDHASH_SZ; nr++)
 		pidhash[nr] = NULL;
+
+	// 初始化定时器
+	init_timervecs();
+
+	// 设置 bh = 0 时回调函数为 timer_bh
+	init_bh(TIMER_BH, timer_bh);
 }
 
 static void reschedule_idle(struct task_struct * p)

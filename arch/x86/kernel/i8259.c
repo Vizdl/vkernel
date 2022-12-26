@@ -147,8 +147,6 @@ void mask_and_ack_8259A(unsigned int irq)
 {
     unsigned int irqmask = 1 << irq;
     unsigned long flags;
-	
-	printk("mask_and_ack_8259A  .... \n");
 
     spin_lock_irqsave(&i8259A_lock, flags);
 	// 如若中断已禁用
@@ -157,7 +155,6 @@ void mask_and_ack_8259A(unsigned int irq)
     cached_irq_mask |= irqmask;
 
 handle_real_irq:
-	printk("mask_and_ack_8259A handle_real_irq\n");
     if (irq & 8) {
         inb(0xA1);		/* DUMMY - (do we need this?) */
         outb(cached_A1,0xA1);
