@@ -77,13 +77,13 @@ static int __init copy_e820_map_from_multiboot(void)
     for (mmap = ((struct multiboot_tag_mmap *)tag)->entries;
         (multiboot_uint8_t *)mmap < (multiboot_uint8_t *)tag + tag->size;
         mmap = (multiboot_memory_map_t *)((unsigned long)mmap + ((struct multiboot_tag_mmap *)tag)->entry_size)){
-            printk(" base_addr = 0x%x%x,"
-                " length = 0x%x%x, type = 0x%x\n",
-                (unsigned)(mmap->addr >> 32),
-                (unsigned)(mmap->addr & 0xffffffff),
-                (unsigned)(mmap->len >> 32),
-                (unsigned)(mmap->len & 0xffffffff),
-                (unsigned)mmap->type);        
+            // printk(" base_addr = 0x%x%x,"
+            //     " length = 0x%x%x, type = 0x%x\n",
+            //     (unsigned)(mmap->addr >> 32),
+            //     (unsigned)(mmap->addr & 0xffffffff),
+            //     (unsigned)(mmap->len >> 32),
+            //     (unsigned)(mmap->len & 0xffffffff),
+            //     (unsigned)mmap->type);        
 		    add_memory_region(mmap->addr, mmap->len, mmap->type);
         }
     return 0;
@@ -95,7 +95,7 @@ void __init setup_memory_region(void)
 	if (copy_e820_map_from_multiboot())
         BUG();
 	printk("BIOS-provided physical RAM map:\n");
-	print_memory_map(who);
+	// print_memory_map(who);
 } /* setup_memory_region */
 
 
