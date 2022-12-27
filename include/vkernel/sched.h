@@ -46,8 +46,8 @@ struct mm_struct {
 #define TASK_RUNNING			0	/* 就绪态/可运行态 */
 #define TASK_INTERRUPTIBLE		1	/* 可中断睡眠 */
 #define TASK_UNINTERRUPTIBLE	2	/* 不可中断睡眠 */
-#define TASK_ZOMBIE				4
-#define TASK_STOPPED			8	/* 停止 */
+#define TASK_ZOMBIE				4	/* 进程已 exit, 但资源还未回收 */
+#define TASK_STOPPED			8	/* 进程已挂起,收到 SIGCONT 信号可继续恢复运行 */
 
 // 调度策略
 #define SCHED_OTHER		0
