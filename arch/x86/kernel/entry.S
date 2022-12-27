@@ -128,7 +128,7 @@ ENTRY(nmi)
 	pushl %edx
 	call SYMBOL_NAME(do_nmi)
 	addl $8,%esp
-	RESTORE_ALL
+	jmp restore_all
 
 ENTRY(int3)
 	pushl $0
