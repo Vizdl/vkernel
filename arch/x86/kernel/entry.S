@@ -17,7 +17,24 @@ EFLAGS		= 0x30
 OLDESP		= 0x34
 OLDSS		= 0x38
 
+CF_MASK		= 0x00000001
+TF_MASK		= 0x00000100
+IF_MASK		= 0x00000200
+DF_MASK		= 0x00000400
+NT_MASK		= 0x00004000
+VM_MASK		= 0x00020000
 
+/*
+ * 属性在 task_struct 的偏移量
+ */
+state		=  0
+flags		=  4
+sigpending	=  8
+addr_limit	= 12
+exec_domain	= 16
+need_resched = 20
+tsk_ptrace	= 24
+processor	= 52
 
 #define SAVE_ALL \
 	cld; \
@@ -59,12 +76,20 @@ ENTRY(ret_from_intr)
 	GET_CURRENT(%ebx)
 	movl EFLAGS(%esp),%eax		# mix EFLAGS and CS
 	movb CS(%esp),%al
+	testl $(VM_MASK | 3),%eax	# return to VM86 mode or non-supervisor?
+	# 无论是什么 cpu 运行级别都进行重调度
+	jmp ret_with_reschedule
 	jmp restore_all
+
 	ALIGN
 handle_softirq:
 	call SYMBOL_NAME(do_softirq)
 	jmp ret_from_intr
 
+	ALIGN
+reschedule:
+	call SYMBOL_NAME(schedule)    # test
+	jmp ret_from_sys_call
 
 ENTRY(divide_error)
 	pushl $0		# no error code
@@ -205,12 +230,18 @@ ENTRY(system_call)
 	GET_CURRENT(%ebx)
 	call *SYMBOL_NAME(sys_call_table)(,%eax,4)
 	movl %eax,EAX(%esp)		# save the return value
+
 # 从系统调用返回
 ENTRY(ret_from_sys_call)
 	# 判断是否有软中断发生
 	movl SYMBOL_NAME(irq_stat),%ecx		# softirq_active
 	testl SYMBOL_NAME(irq_stat)+4,%ecx	# softirq_mask
 	jne   handle_softirq
+
+ret_with_reschedule:
+	cmpl $0,need_resched(%ebx)
+	jne reschedule
+
 restore_all:
 	RESTORE_ALL
 	

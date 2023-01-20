@@ -238,19 +238,15 @@ int mod_timer(struct timer_list *timer, unsigned long expires)
  */
 void timer_bh(void)
 {
-    printk("timer_bh...\n");
 	run_timer_list();
 }
 
 void update_process_times(int user_tick)
 {
 	struct task_struct *p = current;
-	// 如若不是 0 号进程
-	if (p->pid) {
-		if (--p->counter <= 0) {
-			p->counter = 0;
-			p->need_resched = 1;
-		}
+	if (--p->counter <= 0) {
+		p->counter = 2000;
+		p->need_resched = 1;
 	}
 }
 

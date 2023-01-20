@@ -3,10 +3,10 @@
 /**
  * @brief 计算调度权值
  * 
- * @param p 
- * @param this_cpu 
- * @param this_mm 
- * @return int 
+ * @param p 待计算的任务
+ * @param this_cpu 当前 cpu
+ * @param this_mm 待计算任务的 active_mm
+ * @return int 权值
  */
 int goodness(struct task_struct * p, int this_cpu, struct mm_struct *this_mm)
 {

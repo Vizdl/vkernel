@@ -17,6 +17,10 @@
 #define init_task	(init_task_union.task)
 #define init_stack	(init_task_union.stack)
 
+typedef struct {
+	unsigned long seg;
+} mm_segment_t;
+
 // tss 任务上下文
 struct tss_struct {
 	unsigned short	back_link,__blh;
@@ -122,7 +126,7 @@ struct cpuinfo_x86 {
 extern struct cpuinfo_x86 boot_cpu_data;
 #define current_cpu_data boot_cpu_data
 
-
+// 申请两页大小的内存,在 task_struct 高地址处是内核栈
 #define alloc_task_struct() ((struct task_struct *) __get_free_pages(GFP_KERNEL,1))
 #define free_task_struct(p) free_pages((unsigned long) (p), 1)
 #define get_task_struct(tsk)      atomic_inc(&virt_to_page(tsk)->count)

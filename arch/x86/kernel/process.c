@@ -105,3 +105,19 @@ void __fastcall __switch_to(struct task_struct *prev_p, struct task_struct *next
     // 修改 tss 内容,这样如若从内核态回去才能回到正确的进程。
 	// tss->esp0 = next->esp0;
 }
+
+#include <asm/delay.h>
+void cpu_idle (void)
+{
+    int count = 0;
+    while (1) {
+        if (count > 20000) {
+            printk("idle running...\n");
+            count = 0;
+            continue;
+        }
+        count++;
+        udelay(100);
+    };
+    return 0;
+}

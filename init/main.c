@@ -13,6 +13,8 @@ extern void mem_init(void);
 extern void time_init(void);
 extern void fork_init(unsigned long);
 
+void cpu_idle (void);
+
 void __init show_init_task(void)
 {
     printk("current task's state : %d...\n", current->state);
@@ -29,7 +31,7 @@ static int init(void * unused)
     int count = 0;
     printk("init : %p\n", unused);
     while (1) {
-        if (count > 2000) {
+        if (count > 20000) {
             printk("init running...\n");
             count = 0;
             continue;
@@ -57,7 +59,7 @@ asmlinkage void __init start_kernel(void)
     fork_init(mempages);
     // kmem_cache_sizes_init();
 	kernel_thread(init, NULL, CLONE_FS | CLONE_FILES | CLONE_SIGNAL);
-    schedule();
     printk("end kernel...\n");
+    cpu_idle();
     return;
 }

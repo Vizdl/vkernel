@@ -75,11 +75,17 @@ struct mm_struct {
 
 struct task_struct {
 	volatile long state;			// 进程状态 : -1 unrunnable, 0 runnable, >0 stopped
+	unsigned long flags;			/* per process flags, defined below */
+	int sigpending;
+	mm_segment_t addr_limit;
+	struct exec_domain *exec_domain;
+	volatile long need_resched;		// 在返回用户态的时候如若设立该标志则会重调度
+	unsigned long ptrace;
+
 	int processor;
 	struct mm_struct *mm;
 	struct mm_struct *active_mm;
 	struct list_head run_list;		// 就绪态时该链表设到
-    unsigned long ptrace;
 	/* 上下文切换 */
 	struct thread_struct thread;	// 线程上下文
 	/* 进程号进程组相关 */
@@ -91,7 +97,6 @@ struct task_struct {
     unsigned long policy;			// 该进程的调度策略, eg : SCHED_OTHER
     long counter;					// 如若 counter <= 0 则重调度
     unsigned long rt_priority;		// 实时调度策略优先级别
-    volatile long need_resched;		// 在返回用户态的时候如若设立该标志则会重调度
 	/* task_struct 之间的联系(所有进程都会在这三个结构内) */
 	// 1. 哈希表
 	struct task_struct *pidhash_next;
