@@ -17,7 +17,8 @@ struct mm_struct {
 	pgd_t * pgd;
 };
 
-#define DEF_COUNTER	(10*HZ/100)	/* 100 ms time slice */
+// 时间片 : * 100 ms time slice
+#define DEF_COUNTER	(10*HZ/100)
 #define DEF_NICE	(0)
 
 /*
@@ -82,10 +83,10 @@ struct task_struct {
 	volatile long need_resched;		// 在返回用户态的时候如若设立该标志则会重调度
 	unsigned long ptrace;
 
-	int processor;
+	int processor;					// 进程所在的 cpu
 	struct mm_struct *mm;
 	struct mm_struct *active_mm;
-	struct list_head run_list;		// 就绪态时该链表设到
+	struct list_head run_list;		// 就绪态时该链表设到 runqueue_head 链表内
 	/* 上下文切换 */
 	struct thread_struct thread;	// 线程上下文
 	/* 进程号进程组相关 */

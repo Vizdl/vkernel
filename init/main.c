@@ -21,6 +21,18 @@ void __init show_init_task(void)
     return;
 }
 
+void __init test_find_task_by_pid (void)
+{
+    struct task_struct* p;
+    int pid = 1;
+    p = find_task_by_pid(pid);
+    if (p == NULL) {
+        printk("failed to find task (pid = %d)\n", pid);
+    } else {
+        printk("find pid = %d, and found pid = %d\n", pid, p->pid);
+    }
+}
+
 void __init int_test(void)
 {
     __asm__ __volatile__ ("int $32");
@@ -60,6 +72,7 @@ asmlinkage void __init start_kernel(void)
     // kmem_cache_sizes_init();
 	kernel_thread(init, NULL, CLONE_FS | CLONE_FILES | CLONE_SIGNAL);
     printk("end kernel...\n");
+    // test_find_task_by_pid();
     cpu_idle();
     return;
 }
