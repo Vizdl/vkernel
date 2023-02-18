@@ -12,8 +12,8 @@ expect {
     "Command (m for help)" {send "n\n";exp_continue}
     "Select (default p)" {send "p\n";exp_continue}
     "Partition number (1-4, default 1)" {send "1\n";exp_continue}
-    "default 2048)" {send "\n";exp_continue}
-    "Last sector, +sectors or +size{K,M,G}" {send "\n"}
+    "First sector" {send "\n";exp_continue}
+    "Last sector, +sectors or +size" {send "\n"}
 }
 expect "Command (m for help)" {send "w\n";exp_continue} 
 EOF
